@@ -31,12 +31,6 @@
       background: rgba(15,15,15,0.85); backdrop-filter: blur(10px); color: #fff;
       font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .search-results {
-      position: absolute; top: 110%; left: 0; right: 52px; background: rgba(20,20,20,0.95);
-      backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
-      max-height: 200px; overflow-y: auto; display: none;
-    }
-    .search-item { padding: 10px 16px; cursor: pointer; font-size: 13px; color: #ddd; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .fav-panel {
       position: absolute; top: 20px; right: 20px; background: rgba(15,15,15,0.85);
       backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
@@ -58,9 +52,8 @@
 </head>
 <body>
   <div class="search-container">
-    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar ciudad, país..." autocomplete="off">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar radio por nombre..." oninput="searchStationName()" autocomplete="off">
     <button class="geo-btn" onclick="locateUser()" title="Ir a mi ubicación">🎯</button>
-    <div id="searchResults" class="search-results"></div>
   </div>
   <div class="fav-panel">
     <h3>⭐ Favoritos</h3>
@@ -69,7 +62,7 @@
   <div class="crosshair"></div>
   <div class="card">
     <p>🟢 SINTONIZANDO</p>
-    <h2 id="name">Mové el globo...</h2>
+    <h2 id="name">Cargando emisoras...</h2>
     <p id="country">Buscando emisora cercana</p>
     <div>
       <button class="btn" id="playBtn" onclick="toggleAudio()">▶ Reprod.</button>
@@ -93,11 +86,12 @@
       .pointAltitude(0.01)
       .pointRadius(0.35);
 
-    fetch('https://de1.api.radio-browser.info/json/stations/search?limit=800&has_geo_info=true')
+    // Carga 8.000 radios ordenadas por votos/popularidad para incluir Argentina, Brasil y todo el mundo
+    fetch('https://de1.api.radio-browser.info/json/stations/search?limit=8000&has_geo_info=true&order=votes&reverse=true')
       .then(r => r.json())
       .then(data => {
         stations = data.map(s => ({ name: s.name.trim(), country: s.country, lat: +s.geo_lat, lng: +s.geo_long, url: s.url_resolved }))
-                       .filter(s => !isNaN(s.lat) && !isNaN(s.lng));
+                       .filter(s => !isNaN(s.lat) && !isNaN(s.lng) && s.lat !== 0 && s.lng !== 0);
         world.pointsData(stations);
         tuneNearestStation();
         updateFavoritesUI();
@@ -111,7 +105,7 @@
         const d = dist(center.lat, center.lng, s.lat, s.lng);
         if (d < min) { min = d; nearest = s; }
       }
-      if (nearest && min < 500 && nearest !== currentStation) {
+      if (nearest && min < 1000 && nearest !== currentStation) {
         currentStation = nearest;
         document.getElementById('name').innerText = nearest.name;
         document.getElementById('country').innerText = `📍 ${nearest.country} (${Math.round(min)} km)`;
@@ -138,6 +132,13 @@
       }
     }
 
+    function searchStationName() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      if (q.length < 3) return;
+      const found = stations.find(s => s.name.toLowerCase().includes(q) || s.country.toLowerCase().includes(q));
+      if (found) { flyTo(found.lat, found.lng); }
+    }
+
     function toggleFavorite() {
       if (!currentStation) return;
       const index = favorites.findIndex(f => f.url === currentStation.url);
@@ -156,7 +157,7 @@
         favBtn.innerText = isFav ? '♥ Guardado' : '♡ Guardar';
       }
       favList.innerHTML = favorites.length === 0 ? '<p style="font-size:11px; color:#666; margin:0;">Sin favoritos aún</p>' : '';
-      favorites.forEach((fav, i) => {
+      favorites.forEach((fav) => {
         const div = document.createElement('div');
         div.className = 'fav-item';
         div.innerHTML = `<span onclick="flyTo(${fav.lat}, ${fav.lng})" style="cursor:pointer">📻 ${fav.name}</span>`;
