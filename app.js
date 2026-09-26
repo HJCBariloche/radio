@@ -1,5 +1,5 @@
-//* ============================================================
-   RADIO S.C. BARILOCHE - GLOBAL RADIO EXPLORER (Engine HD + FX)
+/* ============================================================
+   RADIO S.C. BARILOCHE - GLOBAL RADIO EXPLORER (Engine Ultra-Fast)
    ============================================================ */
 
 (() => {
@@ -10,12 +10,7 @@
     "https://all.api.radio-browser.info"
   ];
 
-  const BARILOCHE = {
-    lat: -41.1335,
-    lng: -71.3103,
-    label: "Bariloche"
-  };
-
+  const BARILOCHE = { lat: -41.1335, lng: -71.3103, label: "Bariloche" };
   const INITIAL_LIMIT = 8000;
   const SEARCH_LIMIT = 100;
 
@@ -24,65 +19,55 @@
   let selectedGenre = "all";
   let onlyHD = false;
   let userOrigin = { ...BARILOCHE };
-  let hoverStation = null;
 
   let searchTimer = null;
   let flyTimer = null;
-  let lastPointClickTime = 0;
 
   let audio = new Audio();
   let audioCtx = null;
   let favorites = loadFavorites();
 
-  // Inicializar motor de sonido con desbloqueo de navegador
-  function initAudioContext() {
+  // Obtener o desbloquear AudioContext del navegador
+  function getAudioContext() {
     if (!audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) audioCtx = new AudioContextClass();
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtxClass) audioCtx = new AudioCtxClass();
     }
     if (audioCtx && audioCtx.state === "suspended") {
       audioCtx.resume();
     }
+    return audioCtx;
   }
 
-  window.addEventListener("click", initAudioContext, { once: true });
-  window.addEventListener("pointerdown", initAudioContext, { once: true });
-
-  // Sintetizador de estática analógica de dial
-  function playStaticNoise(duration = 0.5) {
+  // Reproducir sonido de estática analógica al instante
+  function playStaticNoise(duration = 0.4) {
     try {
-      initAudioContext();
-      if (!audioCtx) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
 
-      const bufferSize = audioCtx.sampleRate * duration;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = buffer.getChannelData(0);
 
       for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
+        output[i] = (Math.random() * 2 - 1) * 0.15; // Ruido blanco balanceado
       }
 
-      const whiteNoise = audioCtx.createBufferSource();
+      const whiteNoise = ctx.createBufferSource();
       whiteNoise.buffer = buffer;
 
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = 1000;
-      filter.Q.value = 3.0;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-
-      whiteNoise.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
+      whiteNoise.connect(gain);
+      gain.connect(ctx.destination);
 
       whiteNoise.start();
     } catch (e) {}
   }
 
-  // Emisoras especiales garantizadas
+  // Emisoras especiales
   const CUSTOM_STATIONS = [
     {
       name: "La Radio de los Lentos",
@@ -191,28 +176,23 @@
     return isMatchGenre(station) && isMatchHD(station);
   }
 
+  // Inicialización súper fluida del globo
   const world = Globe()(document.getElementById("globe"))
     .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
-    .pointColor(station => isMatchStation(station) ? "#ffaa00" : "rgba(255,170,0,0.08)")
-    .pointAltitude(station => station === hoverStation ? 0.018 : (isMatchStation(station) ? 0.006 : 0.001))
-    .pointRadius(station => station === hoverStation ? 0.25 : (isMatchStation(station) ? 0.14 : 0.04))
-    .pointResolution(8)
+    .pointColor(s => isMatchStation(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
+    .pointAltitude(s => isMatchStation(s) ? 0.01 : 0.001)
+    .pointRadius(s => isMatchStation(s) ? 0.35 : 0.05) // Área de clic más amplia
+    .pointResolution(6)
     .polygonCapColor(() => "rgba(0,0,0,0)")
     .polygonSideColor(() => "rgba(0,0,0,0)")
-    .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
+    .polygonStrokeColor(() => "rgba(255,170,0,0.2)")
     .arcColor(() => ["#ffaa00", "rgba(255,170,0,0.1)"])
-    .arcAltitude(0.25)
+    .arcAltitude(0.2)
     .arcDashLength(0.4)
     .arcDashGap(0.2)
     .arcDashAnimateTime(1200)
-    .arcStroke(0.4) // Haz de luz bien fino y elegante
-    .onPointHover(station => {
-      hoverStation = station;
-      document.body.style.cursor = station ? "pointer" : "default";
-      world.pointRadius(world.pointRadius()).pointAltitude(world.pointAltitude());
-    })
+    .arcStroke(0.3)
     .onPointClick(station => {
-      lastPointClickTime = Date.now();
       flyAndTune(station);
     });
 
@@ -227,7 +207,7 @@
     for (const server of API_SERVERS) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 10000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(server + path, { signal: controller.signal });
         clearTimeout(timer);
         if (res.ok) return await res.json();
@@ -247,13 +227,12 @@
   function addStations(newStations) {
     stations = mergeStations(stations, newStations);
     world.pointsData(stations.filter(hasCoordinates));
-    updatePointStyles();
   }
 
   function updatePointStyles() {
-    world.pointColor(s => isMatchStation(s) ? "#ffaa00" : "rgba(255,170,0,0.08)")
-         .pointAltitude(s => s === hoverStation ? 0.018 : (isMatchStation(s) ? 0.006 : 0.001))
-         .pointRadius(s => s === hoverStation ? 0.25 : (isMatchStation(s) ? 0.14 : 0.04));
+    world.pointColor(s => isMatchStation(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
+         .pointAltitude(s => isMatchStation(s) ? 0.01 : 0.001)
+         .pointRadius(s => isMatchStation(s) ? 0.35 : 0.05);
   }
 
   function clearSearchDropdown() {
@@ -375,16 +354,32 @@
     }
   }
 
+  // Cambio de radio inmediato y ligero
   function flyAndTune(station) {
     if (!station) return;
-    if (flyTimer) clearTimeout(flyTimer);
     
-    playStaticNoise(0.5);
+    // Cancela vuelos y audios anteriores de inmediato
+    if (flyTimer) clearTimeout(flyTimer);
+    try { audio.pause(); } catch(e){}
 
-    if (!hasCoordinates(station)) { tuneStation(station); return; }
+    // Estática inmediata al hacer clic
+    playStaticNoise(0.4);
 
-    world.pointOfView({ lat: station.lat, lng: station.lng, altitude: 0.8 }, 1200);
-    flyTimer = setTimeout(() => tuneStation(station), 1250);
+    currentStation = normalizeStation(station);
+    updateStationCard();
+    if ($("statusText")) $("statusText").textContent = "● BUSCANDO SEÑAL...";
+
+    if (!hasCoordinates(currentStation)) { 
+      tuneStation(currentStation); 
+      return; 
+    }
+
+    // Vuelo rápido de 600 ms
+    world.pointOfView({ lat: currentStation.lat, lng: currentStation.lng, altitude: 0.8 }, 600);
+    
+    flyTimer = setTimeout(() => {
+      tuneStation(currentStation);
+    }, 650);
   }
 
   window.toggleHD = function() {
@@ -410,7 +405,7 @@
   }
 
   window.toggleAudio = function() {
-    initAudioContext();
+    getAudioContext();
     if (!currentStation) return;
     if (audio.paused) {
       audio.play().then(() => setPlayingState(true)).catch(() => setPlayingState(false));
@@ -486,22 +481,14 @@
   }
 
   window.locateOrigin = function() {
-    world.pointOfView({ lat: userOrigin.lat, lng: userOrigin.lng, altitude: 0.9 }, 1200);
-    setTimeout(tuneNearestToCenter, 1300);
+    world.pointOfView({ lat: userOrigin.lat, lng: userOrigin.lng, altitude: 0.9 }, 800);
+    setTimeout(tuneNearestToCenter, 850);
   };
 
   if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition(pos => {
       userOrigin = { lat: pos.coords.latitude, lng: pos.coords.longitude, label: "tu ubicación" };
       if (currentStation) updateStationCard();
-    });
-  }
-
-  const globeElement = $("globe");
-  if (globeElement) {
-    globeElement.addEventListener("dblclick", () => {
-      if (Date.now() - lastPointClickTime < 1000) return;
-      setTimeout(tuneNearestToCenter, 50);
     });
   }
 
