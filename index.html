@@ -22,7 +22,7 @@
 
     /* Buscador y desplegable moderno superior */
     .search-container {
-      position: absolute; top: 20px; left: 20px; z-index: 20;
+      position: absolute; top: 20px; left: 20px; z-index: 30;
       display: flex; flex-direction: column; gap: 10px; max-width: 580px; width: calc(100% - 280px);
     }
     .search-row { display: flex; gap: 10px; width: 100%; align-items: center; }
@@ -74,7 +74,7 @@
     .fav-panel {
       position: absolute; top: 20px; right: 20px; background: rgba(12, 16, 28, 0.95);
       backdrop-filter: blur(12px); border: 1.5px solid rgba(255, 170, 0, 0.4);
-      border-radius: 16px; padding: 14px 18px; z-index: 20; width: 220px; max-height: 250px; overflow-y: auto;
+      border-radius: 16px; padding: 14px 18px; z-index: 30; width: 220px; max-height: 250px; overflow-y: auto;
       box-shadow: 0 8px 24px rgba(0,0,0,0.7);
     }
     .fav-panel h3 { margin: 0 0 10px 0; font-size: 14px; color: #ffaa00; letter-spacing: 0.5px; }
@@ -85,7 +85,7 @@
     .card {
       position: absolute; bottom: 24px; left: 24px; background: rgba(12, 16, 28, 0.95);
       backdrop-filter: blur(12px); padding: 20px 24px; border-radius: 18px;
-      border: 1.5px solid rgba(255, 170, 0, 0.5); z-index: 10; min-width: 330px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5); z-index: 30; min-width: 330px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     }
     .status-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ffaa00; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; }
@@ -102,20 +102,20 @@
     .fav-btn { background: transparent; border: 1.5px solid rgba(255, 170, 0, 0.6); color: #ffaa00; padding: 9px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
     .fav-btn.active { background: #ffaa00; color: #02040a; }
 
-    /* Título destacado inferior derecho */
+    /* Título destacado inferior derecho (Superpuesto en alta prioridad) */
     .branding-box {
-      position: absolute; bottom: 24px; right: 24px; z-index: 10;
-      background: rgba(12, 16, 28, 0.85); backdrop-filter: blur(12px);
-      border: 1.5px solid rgba(255, 170, 0, 0.4); border-radius: 16px;
-      padding: 12px 20px; text-align: right; pointer-events: none;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+      position: absolute; bottom: 24px; right: 24px; z-index: 999;
+      background: rgba(12, 16, 28, 0.92); backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(255, 170, 0, 0.6); border-radius: 16px;
+      padding: 12px 20px; text-align: right;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     }
     .branding-title {
       font-size: 18px; font-weight: 800; color: #ffaa00; letter-spacing: 1.5px;
-      text-transform: uppercase; margin: 0; text-shadow: 0 0 12px rgba(255, 170, 0, 0.5);
+      text-transform: uppercase; margin: 0; text-shadow: 0 0 12px rgba(255, 170, 0, 0.6);
     }
     .branding-sub {
-      font-size: 11px; color: #8a99ad; margin: 2px 0 0 0; letter-spacing: 0.8px;
+      font-size: 11px; color: #8a99ad; margin: 3px 0 0 0; letter-spacing: 0.8px; font-weight: 600;
     }
 
     /* Ecualizador dorado */
@@ -171,7 +171,7 @@
     </div>
   </div>
 
-  <!-- Título destacado inferior derecho -->
+  <!-- Cartel destacado inferior derecho -->
   <div class="branding-box">
     <h1 class="branding-title">RADIO S.C.BARILOCHE</h1>
     <p class="branding-sub">PATAGONIA ARGENTINA • GLOBAL EXPLORER</p>
@@ -184,7 +184,7 @@
     
     // Origen por defecto: San Carlos de Bariloche
     const BARILOCHE = { lat: -41.1335, lng: -71.3103, label: 'Bariloche' };
-    let userOrigin = { ...BARILOCHE }; // Inicia en Bariloche y se actualiza dinámicamente si se autoriza GPS
+    let userOrigin = { ...BARILOCHE };
 
     let audio = new Audio();
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
@@ -238,11 +238,9 @@
             lng: pos.coords.longitude,
             label: 'tu ubicación'
           };
-          // Recalcular arco y distancia si ya hay una emisora sintonizada
           if (currentStation) tuneStation(currentStation);
         },
         (err) => {
-          // Si el usuario rechaza, mantiene Bariloche
           userOrigin = { ...BARILOCHE };
         }
       );
@@ -273,14 +271,12 @@
       if (!station) return;
       currentStation = station;
 
-      // Distancia dinámica según la ubicación detectada
       const distFromOrigin = getKilometers(userOrigin.lat, userOrigin.lng, station.lat, station.lng);
 
       document.getElementById('name').innerText = station.name;
       document.getElementById('country').innerText = `📍 ${station.country}`;
       document.getElementById('distance').innerText = `📐 A ${distFromOrigin.toLocaleString('es-AR')} km de ${userOrigin.label}`;
 
-      // Trazar el arco desde el origen (GPS o Bariloche) hasta la emisora
       world.arcsData([{
         startLat: userOrigin.lat, startLng: userOrigin.lng,
         endLat: station.lat, endLng: station.lng
