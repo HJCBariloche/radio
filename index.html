@@ -8,9 +8,9 @@
   <style>
     body { margin: 0; background-color: #02040a; color: #fff; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
     
-    /* Mirilla central estilizada en cian */
+    /* Mirilla central fija */
     .crosshair {
-      position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
+      position: absolute; top: 50%; left: 50%; width: 26px; height: 26px;
       transform: translate(-50%, -50%); border: 1.5px solid rgba(0, 240, 255, 0.8);
       border-radius: 50%; pointer-events: none; z-index: 10;
       box-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
@@ -20,22 +20,42 @@
       background-color: #00f0ff; border-radius: 50%; transform: translate(-50%, -50%);
     }
 
-    /* Buscador superior */
+    /* Contenedor del Buscador y Filtros */
     .search-container {
       position: absolute; top: 20px; left: 20px; z-index: 20;
-      width: calc(100% - 280px); max-width: 360px; display: flex; gap: 8px;
+      width: calc(100% - 280px); max-width: 420px; display: flex; flex-direction: column; gap: 8px;
     }
+    .search-row { display: flex; gap: 8px; width: 100%; }
     .search-input {
       flex: 1; padding: 10px 16px; border-radius: 20px;
       border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(8, 12, 22, 0.88);
       backdrop-filter: blur(12px); color: #fff; font-size: 13px; outline: none;
     }
     .search-input::placeholder { color: #8a99ad; }
+    
+    .genre-select {
+      padding: 8px 12px; border-radius: 16px;
+      border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(8, 12, 22, 0.9);
+      backdrop-filter: blur(12px); color: #00f0ff; font-size: 12px; outline: none; cursor: pointer;
+    }
+
     .geo-btn {
       width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(0, 240, 255, 0.3);
       background: rgba(8, 12, 22, 0.88); backdrop-filter: blur(12px); color: #00f0ff;
       font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
+
+    /* Sugerencias de búsqueda */
+    .results-dropdown {
+      background: rgba(8, 12, 22, 0.95); border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 12px; max-height: 180px; overflow-y: auto; display: none;
+      backdrop-filter: blur(12px);
+    }
+    .results-item {
+      padding: 8px 12px; font-size: 12px; color: #ccc; cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .results-item:hover { background: rgba(0, 240, 255, 0.15); color: #00f0ff; }
 
     /* Panel de Favoritos */
     .fav-panel {
@@ -51,17 +71,20 @@
     .card {
       position: absolute; bottom: 24px; left: 24px; background: rgba(8, 12, 22, 0.92);
       backdrop-filter: blur(12px); padding: 16px 20px; border-radius: 14px;
-      border: 1px solid rgba(0, 240, 255, 0.3); z-index: 10; min-width: 280px;
+      border: 1px solid rgba(0, 240, 255, 0.3); z-index: 10; min-width: 290px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.7);
     }
     .status-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #00f0ff; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }
     .card h2 { margin: 0 0 4px 0; font-size: 16px; font-weight: 600; }
     .card p { margin: 2px 0; font-size: 12px; color: #8a99ad; }
     .distance-tag { font-size: 11px; color: #00f0ff; font-weight: 600; margin-top: 6px; display: block; }
+    .hint-tag { font-size: 10px; color: #667788; margin-top: 4px; display: block; font-style: italic; }
     
-    .controls { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-    .btn { background: #00f0ff; border: none; color: #02040a; padding: 8px 16px; border-radius: 18px; font-weight: bold; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+    .controls { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+    .btn { background: #00f0ff; border: none; color: #02040a; padding: 8px 14px; border-radius: 18px; font-weight: bold; cursor: pointer; font-size: 12px; transition: all 0.2s; }
     .btn:hover { background: #5cf2ff; transform: scale(1.02); }
+    .random-btn { background: rgba(0, 240, 255, 0.15); border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 7px 12px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.2s; }
+    .random-btn:hover { background: rgba(0, 240, 255, 0.3); }
     .fav-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 7px 12px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 12px; }
     .fav-btn.active { background: #00f0ff; color: #02040a; }
 
@@ -75,8 +98,22 @@
 </head>
 <body>
   <div class="search-container">
-    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país..." oninput="searchStationName()" autocomplete="off">
-    <button class="geo-btn" onclick="locateBariloche()" title="Ir a Bariloche">🏔️</button>
+    <div class="search-row">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país (Enter)..." onkeydown="handleSearchKey(event)" autocomplete="off">
+      <select id="genreSelect" class="genre-select" onchange="filterByGenre(this.value)">
+        <option value="all">🎵 Todos los géneros</option>
+        <option value="rock">🎸 Rock</option>
+        <option value="jazz">🎷 Jazz</option>
+        <option value="pop">🎤 Pop</option>
+        <option value="news">📰 Noticias</option>
+        <option value="electronic">🎧 Electrónica</option>
+        <option value="classical">🎻 Clásica</option>
+        <option value="tango">💃 Tango / Folklore</option>
+        <option value="sports">⚽ Deportes</option>
+      </select>
+      <button class="geo-btn" onclick="locateBariloche()" title="Ir a Bariloche">🏔️</button>
+    </div>
+    <div id="searchResults" class="results-dropdown"></div>
   </div>
 
   <div class="fav-panel">
@@ -96,8 +133,10 @@
     <h2 id="name">Buscando emisoras...</h2>
     <p id="country">-</p>
     <span id="distance" class="distance-tag"></span>
+    <span class="hint-tag">💡 Mové el globo y hacé doble clic para cambiar de radio</span>
     <div class="controls">
       <button class="btn" id="playBtn" onclick="toggleAudio()">▶ Reprod.</button>
+      <button class="random-btn" onclick="playRandomStation()" title="Radio Aleatoria">🎲 Sorpréndeme</button>
       <button class="fav-btn" id="favBtn" onclick="toggleFavorite()">♡ Guardar</button>
     </div>
   </div>
@@ -105,15 +144,13 @@
   <div id="globe"></div>
 
   <script>
-    let stations = [], currentStation = null;
-    // Coordenadas fijas de Bariloche (-41.1335, -71.3103)
+    let stations = [], filteredStations = [], currentStation = null;
     const BARILOCHE = { lat: -41.1335, lng: -71.3103 };
-    let audio = new Audio(), timer = null;
+    let audio = new Audio();
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
 
-    // Cálculo Haversine preciso en kilómetros
     function getKilometers(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Radio medio terrestre
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -123,89 +160,153 @@
       return Math.round(R * c);
     }
 
-    // Configuración del Globo 3D con PUNTOS AZUL CIAN ELEGANTES
     const world = Globe()(document.getElementById('globe'))
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
-      // Puntos fino azul cian neón (completamente alejado del verde)
-      .pointColor(() => '#00f0ff')
-      .pointAltitude(0.003)
-      .pointRadius(0.06)
+      .pointColor(s => s.highlight ? '#00f0ff' : 'rgba(0, 240, 255, 0.25)')
+      .pointAltitude(s => s.highlight ? 0.004 : 0.001)
+      .pointRadius(s => s.highlight ? 0.07 : 0.03)
       .pointResolution(6)
-      // Fronteras continentales sutiles
       .polygonCapColor(() => 'rgba(0,0,0,0)')
       .polygonSideColor(() => 'rgba(0,0,0,0)')
       .polygonStrokeColor(() => 'rgba(0, 240, 255, 0.15)')
-      // Arco animado de señal en cian
       .arcColor(() => ['rgba(0, 240, 255, 1)', 'rgba(0, 240, 255, 0.1)'])
       .arcAltitude(0.28)
       .arcDashLength(0.4)
       .arcDashGap(0.2)
       .arcDashAnimateTime(1200)
-      .arcStroke(1.0);
+      .arcStroke(1.0)
+      .onPointClick((point) => tuneStation(point));
 
-    // Cargar mapas para delimitar fronteras
     fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
       .then(res => res.json())
       .then(countries => world.polygonsData(countries.features));
 
-    // Posición inicial apuntando a Bariloche
     world.pointOfView({ lat: BARILOCHE.lat, lng: BARILOCHE.lng, altitude: 0.9 });
 
-    // Cargar emisoras limpias
     fetch('https://de1.api.radio-browser.info/json/stations/search?limit=8000&has_geo_info=true&order=votes&reverse=true')
       .then(r => r.json())
       .then(data => {
         stations = data.map(s => ({ 
           name: s.name.trim(), 
           country: s.country, 
+          tags: s.tags ? s.tags.toLowerCase() : '',
           lat: parseFloat(s.geo_lat), 
           lng: parseFloat(s.geo_long), 
-          url: s.url_resolved 
+          url: s.url_resolved,
+          highlight: true
         })).filter(s => 
           !isNaN(s.lat) && !isNaN(s.lng) && 
           Math.abs(s.lat) <= 90 && Math.abs(s.lng) <= 180 &&
-          !(Math.abs(s.lat) < 0.1 && Math.abs(s.lng) < 0.1) // Filtrar datos erróneos en (0,0)
+          !(Math.abs(s.lat) < 0.1 && Math.abs(s.lng) < 0.1)
         );
 
+        filteredStations = stations;
         world.pointsData(stations);
-        tuneNearestStation();
+        tuneNearestToCenter();
         updateFavoritesUI();
       });
 
-    function tuneNearestStation() {
-      if (!stations.length) return;
+    function tuneStation(station) {
+      if (!station) return;
+      currentStation = station;
+
+      const distFromBariloche = getKilometers(BARILOCHE.lat, BARILOCHE.lng, station.lat, station.lng);
+
+      document.getElementById('name').innerText = station.name;
+      document.getElementById('country').innerText = `📍 ${station.country}`;
+      document.getElementById('distance').innerText = `📐 A ${distFromBariloche.toLocaleString('es-AR')} km de Bariloche`;
+
+      world.arcsData([{
+        startLat: BARILOCHE.lat, startLng: BARILOCHE.lng,
+        endLat: station.lat, endLng: station.lng
+      }]);
+
+      audio.src = station.url;
+      audio.play().then(() => setPlayingState(true)).catch(() => setPlayingState(false));
+      updateFavoritesUI();
+    }
+
+    function tuneNearestToCenter() {
+      const activeList = filteredStations.filter(s => s.highlight);
+      if (!activeList.length) return;
+      
       const center = world.pointOfView();
       let nearest = null, minCenterDist = Infinity;
 
-      // Encuentra la radio más cercana al CENTRO VISUAL actual del usuario
-      for (const s of stations) {
+      for (const s of activeList) {
         const d = getKilometers(center.lat, center.lng, s.lat, s.lng);
         if (d < minCenterDist) { 
           minCenterDist = d; 
           nearest = s; 
         }
       }
+      if (nearest) tuneStation(nearest);
+    }
 
-      if (nearest && nearest !== currentStation) {
-        currentStation = nearest;
-        
-        // Distancia REAL entre la radio seleccionada y Bariloche
-        const distFromBariloche = getKilometers(BARILOCHE.lat, BARILOCHE.lng, nearest.lat, nearest.lng);
+    // Modo "Radio Aleatoria" / Sorpréndeme
+    function playRandomStation() {
+      const activeList = stations.filter(s => s.highlight);
+      if (!activeList.length) return;
+      const randomIdx = Math.floor(Math.random() * activeList.length);
+      const station = activeList[randomIdx];
+      flyAndTune(station);
+    }
 
-        document.getElementById('name').innerText = nearest.name;
-        document.getElementById('country').innerText = `📍 ${nearest.country}`;
-        document.getElementById('distance').innerText = `📐 A ${distFromBariloche.toLocaleString('es-AR')} km de Bariloche`;
-
-        // Trazar el arco brillante de señal desde Bariloche hasta la emisora en África o el mundo
-        world.arcsData([{
-          startLat: BARILOCHE.lat, startLng: BARILOCHE.lng,
-          endLat: nearest.lat, endLng: nearest.lng
-        }]);
-
-        audio.src = nearest.url;
-        audio.play().then(() => setPlayingState(true)).catch(() => setPlayingState(false));
-        updateFavoritesUI();
+    // Filtro por Género Musical
+    function filterByGenre(genre) {
+      if (genre === 'all') {
+        stations.forEach(s => s.highlight = true);
+      } else {
+        stations.forEach(s => {
+          s.highlight = s.tags.includes(genre) || s.name.toLowerCase().includes(genre);
+        });
       }
+      world.pointsData(stations); // Re-renderizar puntos resaltados
+    }
+
+    document.getElementById('globe').addEventListener('dblclick', () => {
+      tuneNearestToCenter();
+    });
+
+    function handleSearchKey(e) {
+      const q = e.target.value.toLowerCase().trim();
+      const dropdown = document.getElementById('searchResults');
+      
+      if (e.key === 'Enter') {
+        if (!q) return;
+        const matches = stations.filter(s => s.name.toLowerCase().includes(q) || s.country.toLowerCase().includes(q));
+        if (matches.length > 0) {
+          dropdown.style.display = 'none';
+          flyAndTune(matches[0]);
+        }
+        return;
+      }
+
+      if (q.length >= 2) {
+        const matches = stations.filter(s => s.name.toLowerCase().includes(q) || s.country.toLowerCase().includes(q)).slice(0, 5);
+        if (matches.length > 0) {
+          dropdown.innerHTML = matches.map(s => `<div class="results-item" onclick="selectSearchItem('${s.url}')">📻 ${s.name} (${s.country})</div>`).join('');
+          dropdown.style.display = 'block';
+        } else {
+          dropdown.style.display = 'none';
+        }
+      } else {
+        dropdown.style.display = 'none';
+      }
+    }
+
+    function selectSearchItem(url) {
+      const station = stations.find(s => s.url === url);
+      if (station) {
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('searchInput').value = station.name;
+        flyAndTune(station);
+      }
+    }
+
+    function flyAndTune(station) {
+      world.pointOfView({ lat: station.lat, lng: station.lng, altitude: 0.8 }, 2000);
+      setTimeout(() => tuneStation(station), 2100);
     }
 
     function setPlayingState(isPlaying) {
@@ -218,20 +319,9 @@
       else { audio.pause(); setPlayingState(false); }
     }
 
-    function flyTo(lat, lng) {
-      world.pointOfView({ lat, lng, altitude: 0.8 }, 2000);
-      setTimeout(tuneNearestStation, 2100);
-    }
-
     function locateBariloche() {
-      flyTo(BARILOCHE.lat, BARILOCHE.lng);
-    }
-
-    function searchStationName() {
-      const q = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (q.length < 3) return;
-      const found = stations.find(s => s.name.toLowerCase().includes(q) || s.country.toLowerCase().includes(q));
-      if (found) { flyTo(found.lat, found.lng); }
+      world.pointOfView({ lat: BARILOCHE.lat, lng: BARILOCHE.lng, altitude: 0.9 }, 2000);
+      setTimeout(tuneNearestToCenter, 2100);
     }
 
     function toggleFavorite() {
@@ -255,15 +345,10 @@
       favorites.forEach((fav) => {
         const div = document.createElement('div');
         div.className = 'fav-item';
-        div.innerHTML = `<span onclick="flyTo(${fav.lat}, ${fav.lng})" style="cursor:pointer">📻 ${fav.name}</span>`;
+        div.innerHTML = `<span onclick="flyAndTune(${JSON.stringify(fav).replace(/"/g, '&quot;')})" style="cursor:pointer">📻 ${fav.name}</span>`;
         favList.appendChild(div);
       });
     }
-
-    world.controls().addEventListener('change', () => {
-      clearTimeout(timer);
-      timer = setTimeout(tuneNearestStation, 150);
-    });
   </script>
 </body>
 </html>
