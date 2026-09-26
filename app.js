@@ -1,4 +1,4 @@
-/* ============================================================
+//* ============================================================
    RADIO S.C. BARILOCHE - GLOBAL RADIO EXPLORER (Engine HD + FX)
    ============================================================ */
 
@@ -31,37 +31,52 @@
   let lastPointClickTime = 0;
 
   let audio = new Audio();
+  let audioCtx = null;
   let favorites = loadFavorites();
 
-  // Sintetizador de ruido estático analógico de dial (Web Audio API)
-  function playStaticNoise(duration = 0.7) {
+  // Inicializar motor de sonido con desbloqueo de navegador
+  function initAudioContext() {
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) audioCtx = new AudioContextClass();
+    }
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+  }
+
+  window.addEventListener("click", initAudioContext, { once: true });
+  window.addEventListener("pointerdown", initAudioContext, { once: true });
+
+  // Sintetizador de estática analógica de dial
+  function playStaticNoise(duration = 0.5) {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      const bufferSize = ctx.sampleRate * duration;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      initAudioContext();
+      if (!audioCtx) return;
+
+      const bufferSize = audioCtx.sampleRate * duration;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const output = buffer.getChannelData(0);
 
       for (let i = 0; i < bufferSize; i++) {
         output[i] = Math.random() * 2 - 1;
       }
 
-      const whiteNoise = ctx.createBufferSource();
+      const whiteNoise = audioCtx.createBufferSource();
       whiteNoise.buffer = buffer;
 
-      const filter = ctx.createBiquadFilter();
+      const filter = audioCtx.createBiquadFilter();
       filter.type = "bandpass";
-      filter.frequency.value = 1200;
-      filter.Q.value = 2.5;
+      filter.frequency.value = 1000;
+      filter.Q.value = 3.0;
 
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
       whiteNoise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioCtx.destination);
 
       whiteNoise.start();
     } catch (e) {}
@@ -97,7 +112,6 @@
       if (!Array.isArray(parsed)) return [];
       return parsed.filter(Boolean).map(normalizeStation).filter(station => station && station.url);
     } catch (error) {
-      console.warn("No se pudieron cargar los favoritos:", error);
       return [];
     }
   }
@@ -105,9 +119,7 @@
   function saveFavorites() {
     try {
       localStorage.setItem("myRadioFavorites", JSON.stringify(favorites));
-    } catch (error) {
-      console.warn("No se pudieron guardar los favoritos:", error);
-    }
+    } catch (error) {}
   }
 
   function $(id) { return document.getElementById(id); }
@@ -182,18 +194,18 @@
   const world = Globe()(document.getElementById("globe"))
     .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
     .pointColor(station => isMatchStation(station) ? "#ffaa00" : "rgba(255,170,0,0.08)")
-    .pointAltitude(station => station === hoverStation ? 0.015 : (isMatchStation(station) ? 0.005 : 0.001))
-    .pointRadius(station => station === hoverStation ? 0.22 : (isMatchStation(station) ? 0.12 : 0.03))
+    .pointAltitude(station => station === hoverStation ? 0.018 : (isMatchStation(station) ? 0.006 : 0.001))
+    .pointRadius(station => station === hoverStation ? 0.25 : (isMatchStation(station) ? 0.14 : 0.04))
     .pointResolution(8)
     .polygonCapColor(() => "rgba(0,0,0,0)")
     .polygonSideColor(() => "rgba(0,0,0,0)")
     .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
     .arcColor(() => ["#ffaa00", "rgba(255,170,0,0.1)"])
-    .arcAltitude(0.28)
+    .arcAltitude(0.25)
     .arcDashLength(0.4)
     .arcDashGap(0.2)
     .arcDashAnimateTime(1200)
-    .arcStroke(1.2)
+    .arcStroke(0.4) // Haz de luz bien fino y elegante
     .onPointHover(station => {
       hoverStation = station;
       document.body.style.cursor = station ? "pointer" : "default";
@@ -240,8 +252,8 @@
 
   function updatePointStyles() {
     world.pointColor(s => isMatchStation(s) ? "#ffaa00" : "rgba(255,170,0,0.08)")
-         .pointAltitude(s => s === hoverStation ? 0.015 : (isMatchStation(s) ? 0.005 : 0.001))
-         .pointRadius(s => s === hoverStation ? 0.22 : (isMatchStation(s) ? 0.12 : 0.03));
+         .pointAltitude(s => s === hoverStation ? 0.018 : (isMatchStation(s) ? 0.006 : 0.001))
+         .pointRadius(s => s === hoverStation ? 0.25 : (isMatchStation(s) ? 0.14 : 0.04));
   }
 
   function clearSearchDropdown() {
@@ -350,7 +362,6 @@
       }
     }
 
-    // Badge de Calidad / Bitrate
     if ($("bitrateBadge")) {
       const bitrate = currentStation.bitrate;
       const codec = currentStation.codec ? currentStation.codec.toUpperCase() : "";
@@ -368,8 +379,7 @@
     if (!station) return;
     if (flyTimer) clearTimeout(flyTimer);
     
-    // Dispara sonido de estática analógica al cambiar de radio
-    playStaticNoise(0.7);
+    playStaticNoise(0.5);
 
     if (!hasCoordinates(station)) { tuneStation(station); return; }
 
@@ -400,6 +410,7 @@
   }
 
   window.toggleAudio = function() {
+    initAudioContext();
     if (!currentStation) return;
     if (audio.paused) {
       audio.play().then(() => setPlayingState(true)).catch(() => setPlayingState(false));
