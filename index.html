@@ -102,7 +102,7 @@
     .fav-btn { background: transparent; border: 1.5px solid rgba(255, 170, 0, 0.6); color: #ffaa00; padding: 9px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
     .fav-btn.active { background: #ffaa00; color: #02040a; }
 
-    /* Título perfectamente centrado en el box inferior derecho */
+    /* Título centrado en el box inferior derecho */
     .branding-box {
       position: absolute; bottom: 24px; right: 24px; z-index: 999;
       background: rgba(12, 16, 28, 0.92); backdrop-filter: blur(12px);
@@ -161,7 +161,7 @@
 
   <div class="card">
     <div class="status-badge">
-      <span>● SINTONIZANDO</span>
+      <span id="statusText">● SINTONIZANDO</span>
       <div class="eq" id="eqBars" style="display:none;">
         <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
       </div>
@@ -177,7 +177,6 @@
     </div>
   </div>
 
-  <!-- Cartel centrado -->
   <div class="branding-box">
     <h1 class="branding-title">RADIO S.C.BARILOCHE</h1>
     <p class="branding-sub">PATAGONIA ARGENTINA • GLOBAL EXPLORER</p>
@@ -192,9 +191,10 @@
     let userOrigin = { ...BARILOCHE };
 
     let audio = new Audio();
+    audio.crossOrigin = "anonymous"; // Evita bloqueos de seguridad en navegadores
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
 
-    // Inyección garantizada de "La Radio de los Lentos"
+    // Stream directo garantizado de La Radio de los Lentos
     const CUSTOM_STATIONS = [
       {
         name: "La Radio de los Lentos",
@@ -202,7 +202,7 @@
         tags: "lentos baladas romantic love 80s 90s pop",
         lat: -34.6037,
         lng: -58.3816,
-        url: "https://stream.zeno.fm/f3wvbb7534zuv"
+        url: "https://stream.zenolive.com/f3wvbb7534zuv"
       }
     ];
 
@@ -291,14 +291,28 @@
       document.getElementById('name').innerText = station.name;
       document.getElementById('country').innerText = `📍 ${station.country}`;
       document.getElementById('distance').innerText = `📐 A ${distFromOrigin.toLocaleString('es-AR')} km de ${userOrigin.label}`;
+      document.getElementById('statusText').innerText = "● CONECTANDO...";
 
       world.arcsData([{
         startLat: userOrigin.lat, startLng: userOrigin.lng,
         endLat: station.lat, endLng: station.lng
       }]);
 
+      audio.pause();
       audio.src = station.url;
-      audio.play().then(() => setPlayingState(true)).catch(() => setPlayingState(false));
+      audio.load();
+      
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          document.getElementById('statusText').innerText = "● SINTONIZANDO";
+          setPlayingState(true);
+        }).catch((err) => {
+          console.warn("Error de reproducción en el stream:", err);
+          document.getElementById('statusText').innerText = "⚠️ ERROR DE EMISIÓN";
+          setPlayingState(false);
+        });
+      }
       updateFavoritesUI();
     }
 
