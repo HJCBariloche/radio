@@ -190,11 +190,10 @@
     const BARILOCHE = { lat: -41.1335, lng: -71.3103, label: 'Bariloche' };
     let userOrigin = { ...BARILOCHE };
 
-    // Reproductor de audio estándar sin restricciones CORS
     let audio = new Audio();
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
 
-    // Emisora especial inyectada directamente
+    // Emisora inyectada con stream primario
     const CUSTOM_STATIONS = [
       {
         name: "La Radio de los Lentos",
@@ -202,7 +201,7 @@
         tags: "lentos baladas romantic love 80s 90s pop",
         lat: -34.6037,
         lng: -58.3816,
-        url: "https://stream.zeno.fm/f3wvbb7534zuv"
+        url: "https://stream.zeno.fm/f3wvbb7534zuv.aac"
       }
     ];
 
@@ -298,16 +297,37 @@
         endLat: station.lat, endLng: station.lng
       }]);
 
-      audio.src = station.url;
-      audio.play().then(() => {
-        document.getElementById('statusText').innerText = "● SINTONIZANDO";
-        setPlayingState(true);
-      }).catch((err) => {
-        console.warn("Error en reproducción:", err);
-        document.getElementById('statusText').innerText = "⚠️ ERROR DE EMISIÓN";
-        setPlayingState(false);
-      });
+      // Sistema de Fallback Multicanal (AAC -> MP3 -> Direct Stream)
+      const baseUrl = station.url.replace(/\.(aac|mp3)$/, '');
+      const sourcesToTry = [
+        baseUrl + '.aac',
+        baseUrl + '.mp3',
+        baseUrl,
+        'https://stream.zeno.fm/f3wvbb7534zuv'
+      ];
 
+      let attemptIndex = 0;
+
+      const tryStream = () => {
+        if (attemptIndex >= sourcesToTry.length) {
+          document.getElementById('statusText').innerText = "⚠️ ERROR DE EMISIÓN";
+          setPlayingState(false);
+          return;
+        }
+
+        audio.pause();
+        audio.src = sourcesToTry[attemptIndex];
+        
+        audio.play().then(() => {
+          document.getElementById('statusText').innerText = "● SINTONIZANDO";
+          setPlayingState(true);
+        }).catch(() => {
+          attemptIndex++;
+          tryStream();
+        });
+      };
+
+      tryStream();
       updateFavoritesUI();
     }
 
