@@ -6,72 +6,103 @@
   <title>Mi Radio Garden</title>
   <script src="//unpkg.com/globe.gl"></script>
   <style>
-    body { margin: 0; background-color: #030303; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
+    body { margin: 0; background-color: #02040a; color: #fff; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
+    
+    /* Mirilla central estilizada */
     .crosshair {
-      position: absolute; top: 50%; left: 50%; width: 36px; height: 36px;
-      transform: translate(-50%, -50%); border: 2px solid rgba(255,255,255,0.85);
+      position: absolute; top: 50%; left: 50%; width: 28px; height: 28px;
+      transform: translate(-50%, -50%); border: 1.5px solid rgba(0, 255, 204, 0.8);
       border-radius: 50%; pointer-events: none; z-index: 10;
-      box-shadow: 0 0 15px rgba(29, 185, 84, 0.9);
+      box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
     }
     .crosshair::after {
-      content: ''; position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
-      background-color: #1db954; border-radius: 50%; transform: translate(-50%, -50%);
+      content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+      background-color: #00ffcc; border-radius: 50%; transform: translate(-50%, -50%);
     }
+
+    /* Buscador superior */
     .search-container {
       position: absolute; top: 20px; left: 20px; z-index: 20;
-      width: calc(100% - 280px); max-width: 380px; display: flex; gap: 8px;
+      width: calc(100% - 280px); max-width: 360px; display: flex; gap: 8px;
     }
     .search-input {
-      flex: 1; padding: 12px 18px; border-radius: 24px;
-      border: 1px solid rgba(255,255,255,0.2); background: rgba(15,15,15,0.85);
-      backdrop-filter: blur(10px); color: #fff; font-size: 14px; outline: none; box-sizing: border-box;
+      flex: 1; padding: 10px 16px; border-radius: 20px;
+      border: 1px solid rgba(0, 255, 204, 0.2); background: rgba(8, 12, 22, 0.85);
+      backdrop-filter: blur(12px); color: #fff; font-size: 13px; outline: none;
     }
     .geo-btn {
-      width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(15,15,15,0.85); backdrop-filter: blur(10px); color: #fff;
-      font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(0, 255, 204, 0.3);
+      background: rgba(8, 12, 22, 0.85); backdrop-filter: blur(12px); color: #00ffcc;
+      font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
+
+    /* Panel de Favoritos */
     .fav-panel {
-      position: absolute; top: 20px; right: 20px; background: rgba(15,15,15,0.85);
-      backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px; padding: 12px 16px; z-index: 20; width: 200px; max-height: 250px; overflow-y: auto;
+      position: absolute; top: 20px; right: 20px; background: rgba(8, 12, 22, 0.85);
+      backdrop-filter: blur(12px); border: 1px solid rgba(0, 255, 204, 0.15);
+      border-radius: 12px; padding: 12px 16px; z-index: 20; width: 210px; max-height: 240px; overflow-y: auto;
     }
-    .fav-panel h3 { margin: 0 0 8px 0; font-size: 14px; color: #1db954; }
-    .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
+    .fav-panel h3 { margin: 0 0 8px 0; font-size: 13px; color: #00ffcc; letter-spacing: 0.5px; }
+    .fav-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; color: #ccc; }
+    .fav-item:hover { color: #00ffcc; }
+
+    /* Tarjeta de reproducción inferior */
     .card {
-      position: absolute; bottom: 24px; left: 24px; background: rgba(15,15,15,0.85);
-      backdrop-filter: blur(8px); padding: 16px 20px; border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1); z-index: 10; min-width: 240px;
+      position: absolute; bottom: 24px; left: 24px; background: rgba(8, 12, 22, 0.88);
+      backdrop-filter: blur(12px); padding: 16px 20px; border-radius: 14px;
+      border: 1px solid rgba(0, 255, 204, 0.2); z-index: 10; min-width: 250px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-    .card h2 { margin: 0 0 4px 0; font-size: 18px; }
-    .card p { margin: 0; font-size: 13px; color: #8e8e93; }
-    .btn { margin-top: 10px; background: #1db954; border: none; color: #000; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-    .fav-btn { background: transparent; border: 1px solid #1db954; color: #1db954; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; margin-left: 8px; }
-    .fav-btn.active { background: #1db954; color: #000; }
+    .status-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #00ffcc; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }
+    .card h2 { margin: 0 0 4px 0; font-size: 17px; font-weight: 600; }
+    .card p { margin: 0; font-size: 12px; color: #8a99ad; }
+    .controls { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .btn { background: #00ffcc; border: none; color: #02040a; padding: 8px 16px; border-radius: 18px; font-weight: bold; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+    .btn:hover { background: #33ffd6; transform: scale(1.02); }
+    .fav-btn { background: transparent; border: 1px solid rgba(0,255,204,0.4); color: #00ffcc; padding: 7px 12px; border-radius: 18px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    .fav-btn.active { background: #00ffcc; color: #02040a; }
+
+    /* Animación del ecualizador visual diferencial */
+    .eq { display: flex; gap: 2px; height: 10px; align-items: flex-end; margin-left: auto; }
+    .eq-bar { width: 2px; background: #00ffcc; animation: eqAnim 0.8s infinite alternate; }
+    .eq-bar:nth-child(2) { animation-delay: 0.2s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes eqAnim { 0% { height: 2px; } 100% { height: 10px; } }
   </style>
 </head>
 <body>
   <div class="search-container">
-    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar radio por nombre..." oninput="searchStationName()" autocomplete="off">
-    <button class="geo-btn" onclick="locateUser()" title="Ir a mi ubicación">🎯</button>
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país..." oninput="searchStationName()" autocomplete="off">
+    <button class="geo-btn" onclick="locateUser()" title="Ir a mi posición">🎯</button>
   </div>
+
   <div class="fav-panel">
-    <h3>⭐ Favoritos</h3>
+    <h3>⭐ MIS FAVORITAS</h3>
     <div id="favList"></div>
   </div>
+
   <div class="crosshair"></div>
+
   <div class="card">
-    <p>🟢 SINTONIZANDO</p>
-    <h2 id="name">Cargando emisoras...</h2>
-    <p id="country">Buscando emisora cercana</p>
-    <div>
+    <div class="status-badge">
+      <span>● SINTONIZANDO</span>
+      <div class="eq" id="eqBars" style="display:none;">
+        <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+      </div>
+    </div>
+    <h2 id="name">Cargando radios...</h2>
+    <p id="country">Buscando emisoras cercanas</p>
+    <div class="controls">
       <button class="btn" id="playBtn" onclick="toggleAudio()">▶ Reprod.</button>
       <button class="fav-btn" id="favBtn" onclick="toggleFavorite()">♡ Guardar</button>
     </div>
   </div>
+
   <div id="globe"></div>
+
   <script>
-    let stations = [], currentStation = null, audio = new Audio(), timer = null;
+    let stations = [], currentStation = null, userPos = { lat: -38.4, lng: -63.6 };
+    let audio = new Audio(), timer = null;
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
 
     function dist(lat1, lon1, lat2, lon2) {
@@ -80,27 +111,40 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // Configuración del Globo 3D estilo Radio Garden
+    // Configuración del Globo 3D
     const world = Globe()(document.getElementById('globe'))
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
-      .pointColor(() => '#1db954')
-      .pointAltitude(0.005)
-      .pointRadius(0.25)
+      // Puntos mucho más delgados y delicados
+      .pointColor(() => '#00ffcc')
+      .pointAltitude(0.003)
+      .pointRadius(0.12)
+      // Líneas fronterizas de países sutiles
       .polygonCapColor(() => 'rgba(0,0,0,0)')
       .polygonSideColor(() => 'rgba(0,0,0,0)')
-      .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.25)'); // Líneas de fronteras de países
+      .polygonStrokeColor(() => 'rgba(0, 255, 204, 0.15)')
+      // Elemento diferenciador: Arcos de señal de emisión
+      .arcColor(() => ['rgba(0, 255, 204, 0.8)', 'rgba(0, 255, 204, 0.1)'])
+      .arcDashLength(0.4)
+      .arcDashGap(0.2)
+      .arcDashAnimateTime(1500)
+      .arcStroke(0.6);
 
-    // Cargar mapa de países (líneas de división)
+    // Cargar mapa de países para delimitar fronteras
     fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
       .then(res => res.json())
-      .then(countries => {
-        world.polygonsData(countries.features);
+      .then(countries => world.polygonsData(countries.features));
+
+    // Tamaño más cercano (Altitude 0.9 para que ocupe casi toda la pantalla)
+    world.pointOfView({ lat: -38.4, lng: -63.6, altitude: 0.9 });
+
+    // Intentar ubicar al usuario al inicio para calcular arcos de señal
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       });
+    }
 
-    // Zoom más grande e inicial enfocado en Sudamérica
-    world.pointOfView({ lat: -38.4, lng: -63.6, altitude: 1.4 });
-
-    // Carga de 8.000 radios
+    // Cargar 8.000 emisoras
     fetch('https://de1.api.radio-browser.info/json/stations/search?limit=8000&has_geo_info=true&order=votes&reverse=true')
       .then(r => r.json())
       .then(data => {
@@ -119,31 +163,40 @@
         const d = dist(center.lat, center.lng, s.lat, s.lng);
         if (d < min) { min = d; nearest = s; }
       }
-      if (nearest && min < 1000 && nearest !== currentStation) {
+      if (nearest && min < 800 && nearest !== currentStation) {
         currentStation = nearest;
         document.getElementById('name').innerText = nearest.name;
         document.getElementById('country').innerText = `📍 ${nearest.country} (${Math.round(min)} km)`;
+        
+        // Crear arco de conexión visual hasta la emisora sintonizada
+        world.arcsData([{
+          startLat: userPos.lat, startLng: userPos.lng,
+          endLat: nearest.lat, endLng: nearest.lng
+        }]);
+
         audio.src = nearest.url;
-        audio.play().then(() => document.getElementById('playBtn').innerText = '⏸ Pausa')
-             .catch(() => document.getElementById('playBtn').innerText = '▶ Reprod.');
+        audio.play().then(() => setPlayingState(true)).catch(() => setPlayingState(false));
         updateFavoritesUI();
       }
     }
 
+    function setPlayingState(isPlaying) {
+      document.getElementById('playBtn').innerText = isPlaying ? '⏸ Pausa' : '▶ Reprod.';
+      document.getElementById('eqBars').style.display = isPlaying ? 'flex' : 'none';
+    }
+
     function toggleAudio() {
-      if (audio.paused) { audio.play(); document.getElementById('playBtn').innerText = '⏸ Pausa'; }
-      else { audio.pause(); document.getElementById('playBtn').innerText = '▶ Reprod.'; }
+      if (audio.paused) { audio.play(); setPlayingState(true); }
+      else { audio.pause(); setPlayingState(false); }
     }
 
     function flyTo(lat, lng) {
-      world.pointOfView({ lat, lng, altitude: 1.2 }, 2000);
+      world.pointOfView({ lat, lng, altitude: 0.8 }, 2000);
       setTimeout(tuneNearestStation, 2100);
     }
 
     function locateUser() {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(pos => flyTo(pos.coords.latitude, pos.coords.longitude));
-      }
+      flyTo(userPos.lat, userPos.lng);
     }
 
     function searchStationName() {
@@ -170,7 +223,7 @@
         favBtn.classList.toggle('active', isFav);
         favBtn.innerText = isFav ? '♥ Guardado' : '♡ Guardar';
       }
-      favList.innerHTML = favorites.length === 0 ? '<p style="font-size:11px; color:#666; margin:0;">Sin favoritos aún</p>' : '';
+      favList.innerHTML = favorites.length === 0 ? '<p style="font-size:11px; color:#666; margin:0;">Sin favoritos</p>' : '';
       favorites.forEach((fav) => {
         const div = document.createElement('div');
         div.className = 'fav-item';
