@@ -23,10 +23,11 @@
   let currentStation = null;
   let selectedGenre = "all";
   let userOrigin = { ...BARILOCHE };
+  let hoverStation = null;
 
   let searchTimer = null;
   let flyTimer = null;
-  let lastPointClickTime = 0; // Control de coincidencia para clics en puntos
+  let lastPointClickTime = 0;
 
   let audio = new Audio();
   let favorites = loadFavorites();
@@ -131,9 +132,9 @@
   const world = Globe()(document.getElementById("globe"))
     .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
     .pointColor(station => isMatchGenre(station) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-    .pointAltitude(station => isMatchGenre(station) ? 0.003 : 0.001)
-    .pointRadius(station => isMatchGenre(station) ? 0.07 : 0.02)
-    .pointResolution(6)
+    .pointAltitude(station => station === hoverStation ? 0.015 : (isMatchGenre(station) ? 0.005 : 0.001))
+    .pointRadius(station => station === hoverStation ? 0.22 : (isMatchGenre(station) ? 0.12 : 0.04))
+    .pointResolution(8)
     .polygonCapColor(() => "rgba(0,0,0,0)")
     .polygonSideColor(() => "rgba(0,0,0,0)")
     .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
@@ -143,8 +144,13 @@
     .arcDashGap(0.2)
     .arcDashAnimateTime(1200)
     .arcStroke(1.2)
+    .onPointHover(station => {
+      hoverStation = station;
+      document.body.style.cursor = station ? "pointer" : "default";
+      world.pointRadius(world.pointRadius()).pointAltitude(world.pointAltitude());
+    })
     .onPointClick(station => {
-      lastPointClickTime = Date.now(); // Marca tiempo de clic directo en punto
+      lastPointClickTime = Date.now();
       flyAndTune(station);
     });
 
@@ -184,8 +190,8 @@
 
   function updatePointStyles() {
     world.pointColor(s => isMatchGenre(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-         .pointAltitude(s => isMatchGenre(s) ? 0.003 : 0.001)
-         .pointRadius(s => isMatchGenre(s) ? 0.07 : 0.02);
+         .pointAltitude(s => s === hoverStation ? 0.015 : (isMatchGenre(s) ? 0.005 : 0.001))
+         .pointRadius(s => s === hoverStation ? 0.22 : (isMatchGenre(s) ? 0.12 : 0.04));
   }
 
   function clearSearchDropdown() {
@@ -405,11 +411,11 @@
     });
   }
 
-  // Doble clic global en el mapa (ignora si fue sobre un punto específico)
+  // Doble clic en zonas vacías del globo para la radio más cercana al centro
   const globeElement = $("globe");
   if (globeElement) {
     globeElement.addEventListener("dblclick", () => {
-      if (Date.now() - lastPointClickTime < 600) return; // Evita conflicto con el clic del punto
+      if (Date.now() - lastPointClickTime < 1000) return;
       setTimeout(tuneNearestToCenter, 50);
     });
   }
