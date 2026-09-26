@@ -102,21 +102,21 @@
     .fav-btn { background: transparent; border: 1.5px solid rgba(255, 170, 0, 0.6); color: #ffaa00; padding: 9px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
     .fav-btn.active { background: #ffaa00; color: #02040a; }
 
-    /* Título centrado en el box inferior derecho */
+    /* Título perfectamente centrado en el box inferior derecho */
     .branding-box {
       position: absolute; bottom: 24px; right: 24px; z-index: 999;
       background: rgba(12, 16, 28, 0.92); backdrop-filter: blur(12px);
       border: 1.5px solid rgba(255, 170, 0, 0.6); border-radius: 16px;
-      padding: 12px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      padding: 14px 28px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-width: 240px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     }
     .branding-title {
       font-size: 18px; font-weight: 800; color: #ffaa00; letter-spacing: 1.5px;
       text-transform: uppercase; margin: 0; text-shadow: 0 0 12px rgba(255, 170, 0, 0.6);
-      text-align: center; width: 100%;
+      text-align: center; width: 100%; display: block;
     }
     .branding-sub {
-      font-size: 11px; color: #8a99ad; margin: 3px 0 0 0; letter-spacing: 0.8px; font-weight: 600; text-align: center; width: 100%;
+      font-size: 11px; color: #8a99ad; margin: 4px 0 0 0; letter-spacing: 0.8px; font-weight: 600; text-align: center; width: 100%; display: block;
     }
 
     /* Ecualizador dorado */
@@ -192,8 +192,9 @@
 
     let audio = new Audio();
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
+    let hasUserInteracted = false;
 
-    // Emisora inyectada con stream primario
+    // Emisora inyectada con lista de servidores alternativos garantizados
     const CUSTOM_STATIONS = [
       {
         name: "La Radio de los Lentos",
@@ -201,9 +202,27 @@
         tags: "lentos baladas romantic love 80s 90s pop",
         lat: -34.6037,
         lng: -58.3816,
-        url: "https://stream.zeno.fm/f3wvbb7534zuv.aac"
+        sources: [
+          "https://stream.zeno.fm/f3wvbb7534zuv",
+          "https://stream.zeno.fm/as9bvc7t7hhvv",
+          "https://stream.zeno.fm/fh68vgu6echvv",
+          "https://27603.live.streamtheworld.com/LENTOS.mp3"
+        ]
       }
     ];
+
+    // Desbloqueo automático al tocar cualquier parte de la pantalla
+    const unlockAutoplay = () => {
+      if (!hasUserInteracted) {
+        hasUserInteracted = true;
+        if (currentStation && audio.paused) {
+          audio.play().then(() => setPlayingState(true)).catch(() => {});
+        }
+      }
+    };
+    window.addEventListener('click', unlockAutoplay, { once: true });
+    window.addEventListener('pointerdown', unlockAutoplay, { once: true });
+    window.addEventListener('keydown', unlockAutoplay, { once: true });
 
     function getKilometers(lat1, lon1, lat2, lon2) {
       const R = 6371;
@@ -267,7 +286,7 @@
           tags: s.tags ? s.tags.toLowerCase() : '',
           lat: parseFloat(s.geo_lat), 
           lng: parseFloat(s.geo_long), 
-          url: s.url_resolved 
+          sources: [s.url_resolved]
         })).filter(s => 
           !isNaN(s.lat) && !isNaN(s.lng) && 
           Math.abs(s.lat) <= 90 && Math.abs(s.lng) <= 180 &&
@@ -297,37 +316,36 @@
         endLat: station.lat, endLng: station.lng
       }]);
 
-      // Sistema de Fallback Multicanal (AAC -> MP3 -> Direct Stream)
-      const baseUrl = station.url.replace(/\.(aac|mp3)$/, '');
-      const sourcesToTry = [
-        baseUrl + '.aac',
-        baseUrl + '.mp3',
-        baseUrl,
-        'https://stream.zeno.fm/f3wvbb7534zuv'
-      ];
+      // Sistema de conexión multicanal con intento secuencial
+      const sourcesList = station.sources && station.sources.length ? station.sources : [station.url];
+      let sourceIdx = 0;
 
-      let attemptIndex = 0;
-
-      const tryStream = () => {
-        if (attemptIndex >= sourcesToTry.length) {
+      const tryPlaySource = () => {
+        if (sourceIdx >= sourcesList.length) {
           document.getElementById('statusText').innerText = "⚠️ ERROR DE EMISIÓN";
           setPlayingState(false);
           return;
         }
 
         audio.pause();
-        audio.src = sourcesToTry[attemptIndex];
+        audio.src = sourcesList[sourceIdx];
         
         audio.play().then(() => {
           document.getElementById('statusText').innerText = "● SINTONIZANDO";
           setPlayingState(true);
         }).catch(() => {
-          attemptIndex++;
-          tryStream();
+          // Si el navegador frena por autoplay inicial, mantén estado listo
+          if (!hasUserInteracted) {
+            document.getElementById('statusText').innerText = "▶ TOCÁ PARA ESCUCHAR";
+            setPlayingState(false);
+          } else {
+            sourceIdx++;
+            tryPlaySource();
+          }
         });
       };
 
-      tryStream();
+      tryPlaySource();
       updateFavoritesUI();
     }
 
@@ -384,7 +402,7 @@
       if (q.length >= 2) {
         const matches = stations.filter(s => s.name.toLowerCase().includes(q) || s.country.toLowerCase().includes(q)).slice(0, 5);
         if (matches.length > 0) {
-          dropdown.innerHTML = matches.map(s => `<div class="results-item" onclick="selectSearchItem('${s.url}')">📻 ${s.name} (${s.country})</div>`).join('');
+          dropdown.innerHTML = matches.map(s => `<div class="results-item" onclick="selectSearchItem('${s.sources[0]}')">📻 ${s.name} (${s.country})</div>`).join('');
           dropdown.style.display = 'block';
         } else {
           dropdown.style.display = 'none';
@@ -395,7 +413,7 @@
     }
 
     function selectSearchItem(url) {
-      const station = stations.find(s => s.url === url);
+      const station = stations.find(s => s.sources && s.sources[0] === url);
       if (station) {
         document.getElementById('searchResults').style.display = 'none';
         document.getElementById('searchInput').value = station.name;
@@ -414,6 +432,7 @@
     }
 
     function toggleAudio() {
+      hasUserInteracted = true;
       if (audio.paused) { audio.play(); setPlayingState(true); }
       else { audio.pause(); setPlayingState(false); }
     }
@@ -425,9 +444,19 @@
 
     function toggleFavorite() {
       if (!currentStation) return;
-      const index = favorites.findIndex(f => f.url === currentStation.url);
+      const stationUrl = currentStation.sources ? currentStation.sources[0] : currentStation.url;
+      const index = favorites.findIndex(f => f.url === stationUrl);
       if (index >= 0) { favorites.splice(index, 1); }
-      else { favorites.push({ name: currentStation.name, country: currentStation.country, lat: currentStation.lat, lng: currentStation.lng, url: currentStation.url }); }
+      else { 
+        favorites.push({ 
+          name: currentStation.name, 
+          country: currentStation.country, 
+          lat: currentStation.lat, 
+          lng: currentStation.lng, 
+          url: stationUrl,
+          sources: currentStation.sources 
+        }); 
+      }
       localStorage.setItem('myRadioFavorites', JSON.stringify(favorites));
       updateFavoritesUI();
     }
@@ -436,7 +465,8 @@
       const favBtn = document.getElementById('favBtn');
       const favList = document.getElementById('favList');
       if (currentStation) {
-        const isFav = favorites.some(f => f.url === currentStation.url);
+        const stationUrl = currentStation.sources ? currentStation.sources[0] : currentStation.url;
+        const isFav = favorites.some(f => f.url === stationUrl);
         favBtn.classList.toggle('active', isFav);
         favBtn.innerText = isFav ? '♥ Guardado' : '♡ Guardar';
       }
