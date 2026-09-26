@@ -1,5 +1,5 @@
 /* ============================================================
-   RADIO S.C. BARILOCHE - GLOBAL RADIO EXPLORER (Engine)
+   RADIO S.C. BARILOCHE - GLOBAL RADIO EXPLORER (Engine HD + FX)
    ============================================================ */
 
 (() => {
@@ -22,6 +22,7 @@
   let stations = [];
   let currentStation = null;
   let selectedGenre = "all";
+  let onlyHD = false;
   let userOrigin = { ...BARILOCHE };
   let hoverStation = null;
 
@@ -32,6 +33,40 @@
   let audio = new Audio();
   let favorites = loadFavorites();
 
+  // Sintetizador de ruido estático analógico de dial (Web Audio API)
+  function playStaticNoise(duration = 0.7) {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const output = buffer.getChannelData(0);
+
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+
+      const whiteNoise = ctx.createBufferSource();
+      whiteNoise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 1200;
+      filter.Q.value = 2.5;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+      whiteNoise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      whiteNoise.start();
+    } catch (e) {}
+  }
+
   // Emisoras especiales garantizadas
   const CUSTOM_STATIONS = [
     {
@@ -39,6 +74,8 @@
       country: "Argentina",
       state: "Buenos Aires",
       tags: "lentos baladas romantic love 80s 90s pop",
+      bitrate: 320,
+      codec: "MP3",
       lat: -34.6037,
       lng: -58.3816,
       url: "https://stream.zeno.fm/f3wvbb7534zuv",
@@ -94,6 +131,8 @@
       country: cleanText(raw.country),
       state: cleanText(raw.state),
       tags: cleanText(raw.tags).toLowerCase(),
+      bitrate: Number(raw.bitrate) || 0,
+      codec: cleanText(raw.codec),
       lat: Number.isFinite(lat) ? lat : null,
       lng: Number.isFinite(lng) ? lng : null,
       url: primaryUrl,
@@ -129,11 +168,22 @@
     return tags.includes(selectedGenre) || name.includes(selectedGenre);
   }
 
+  function isMatchHD(station) {
+    if (!onlyHD) return true;
+    const bitrate = station.bitrate || 0;
+    const codec = (station.codec || "").toLowerCase();
+    return bitrate >= 192 || codec === "flac";
+  }
+
+  function isMatchStation(station) {
+    return isMatchGenre(station) && isMatchHD(station);
+  }
+
   const world = Globe()(document.getElementById("globe"))
     .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
-    .pointColor(station => isMatchGenre(station) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-    .pointAltitude(station => station === hoverStation ? 0.015 : (isMatchGenre(station) ? 0.005 : 0.001))
-    .pointRadius(station => station === hoverStation ? 0.22 : (isMatchGenre(station) ? 0.12 : 0.04))
+    .pointColor(station => isMatchStation(station) ? "#ffaa00" : "rgba(255,170,0,0.08)")
+    .pointAltitude(station => station === hoverStation ? 0.015 : (isMatchStation(station) ? 0.005 : 0.001))
+    .pointRadius(station => station === hoverStation ? 0.22 : (isMatchStation(station) ? 0.12 : 0.03))
     .pointResolution(8)
     .polygonCapColor(() => "rgba(0,0,0,0)")
     .polygonSideColor(() => "rgba(0,0,0,0)")
@@ -189,9 +239,9 @@
   }
 
   function updatePointStyles() {
-    world.pointColor(s => isMatchGenre(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-         .pointAltitude(s => s === hoverStation ? 0.015 : (isMatchGenre(s) ? 0.005 : 0.001))
-         .pointRadius(s => s === hoverStation ? 0.22 : (isMatchGenre(s) ? 0.12 : 0.04));
+    world.pointColor(s => isMatchStation(s) ? "#ffaa00" : "rgba(255,170,0,0.08)")
+         .pointAltitude(s => s === hoverStation ? 0.015 : (isMatchStation(s) ? 0.005 : 0.001))
+         .pointRadius(s => s === hoverStation ? 0.22 : (isMatchStation(s) ? 0.12 : 0.03));
   }
 
   function clearSearchDropdown() {
@@ -290,6 +340,7 @@
     if (!currentStation) return;
     if ($("name")) $("name").textContent = currentStation.name;
     if ($("country")) $("country").textContent = `📍 ${currentStation.country || "Ubicación desconocida"}`;
+    
     if ($("distance")) {
       if (hasCoordinates(currentStation)) {
         const dist = getKilometers(userOrigin.lat, userOrigin.lng, currentStation.lat, currentStation.lng);
@@ -298,19 +349,43 @@
         $("distance").textContent = "📍 Ubicación no disponible";
       }
     }
+
+    // Badge de Calidad / Bitrate
+    if ($("bitrateBadge")) {
+      const bitrate = currentStation.bitrate;
+      const codec = currentStation.codec ? currentStation.codec.toUpperCase() : "";
+      if (bitrate > 0 || codec) {
+        const isHQ = bitrate >= 192 || codec === "FLAC";
+        $("bitrateBadge").textContent = `${isHQ ? "⚡ HQ " : ""}${bitrate ? bitrate + " kbps" : ""} ${codec ? "(" + codec + ")" : ""}`;
+        $("bitrateBadge").style.display = "inline-block";
+      } else {
+        $("bitrateBadge").style.display = "none";
+      }
+    }
   }
 
   function flyAndTune(station) {
     if (!station) return;
     if (flyTimer) clearTimeout(flyTimer);
+    
+    // Dispara sonido de estática analógica al cambiar de radio
+    playStaticNoise(0.7);
+
     if (!hasCoordinates(station)) { tuneStation(station); return; }
 
     world.pointOfView({ lat: station.lat, lng: station.lng, altitude: 0.8 }, 1200);
     flyTimer = setTimeout(() => tuneStation(station), 1250);
   }
 
+  window.toggleHD = function() {
+    onlyHD = !onlyHD;
+    const btn = $("hdBtn");
+    if (btn) btn.classList.toggle("active", onlyHD);
+    updatePointStyles();
+  };
+
   window.playRandomStation = function() {
-    const active = stations.filter(s => s.url && isMatchGenre(s));
+    const active = stations.filter(s => s.url && isMatchStation(s));
     if (active.length) flyAndTune(active[Math.floor(Math.random() * active.length)]);
   };
 
@@ -387,7 +462,7 @@
   }
 
   function tuneNearestToCenter() {
-    const active = stations.filter(s => hasCoordinates(s) && isMatchGenre(s));
+    const active = stations.filter(s => hasCoordinates(s) && isMatchStation(s));
     if (!active.length) return;
     const pov = world.pointOfView();
     let nearest = null, minD = Infinity;
@@ -411,7 +486,6 @@
     });
   }
 
-  // Doble clic en zonas vacías del globo para la radio más cercana al centro
   const globeElement = $("globe");
   if (globeElement) {
     globeElement.addEventListener("dblclick", () => {
