@@ -6,12 +6,12 @@
   <title>Mi Radio Garden</title>
   <script src="//unpkg.com/globe.gl"></script>
   <style>
-    body { margin: 0; background-color: #050505; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
+    body { margin: 0; background-color: #030303; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
     .crosshair {
       position: absolute; top: 50%; left: 50%; width: 36px; height: 36px;
-      transform: translate(-50%, -50%); border: 2px solid rgba(255,255,255,0.8);
+      transform: translate(-50%, -50%); border: 2px solid rgba(255,255,255,0.85);
       border-radius: 50%; pointer-events: none; z-index: 10;
-      box-shadow: 0 0 12px rgba(29, 185, 84, 0.8);
+      box-shadow: 0 0 15px rgba(29, 185, 84, 0.9);
     }
     .crosshair::after {
       content: ''; position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
@@ -80,13 +80,27 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
+    // Configuración del Globo 3D estilo Radio Garden
     const world = Globe()(document.getElementById('globe'))
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
       .pointColor(() => '#1db954')
-      .pointAltitude(0.01)
-      .pointRadius(0.35);
+      .pointAltitude(0.005)
+      .pointRadius(0.25)
+      .polygonCapColor(() => 'rgba(0,0,0,0)')
+      .polygonSideColor(() => 'rgba(0,0,0,0)')
+      .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.25)'); // Líneas de fronteras de países
 
-    // Carga 8.000 radios ordenadas por votos/popularidad para incluir Argentina, Brasil y todo el mundo
+    // Cargar mapa de países (líneas de división)
+    fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
+      .then(res => res.json())
+      .then(countries => {
+        world.polygonsData(countries.features);
+      });
+
+    // Zoom más grande e inicial enfocado en Sudamérica
+    world.pointOfView({ lat: -38.4, lng: -63.6, altitude: 1.4 });
+
+    // Carga de 8.000 radios
     fetch('https://de1.api.radio-browser.info/json/stations/search?limit=8000&has_geo_info=true&order=votes&reverse=true')
       .then(r => r.json())
       .then(data => {
@@ -122,7 +136,7 @@
     }
 
     function flyTo(lat, lng) {
-      world.pointOfView({ lat, lng, altitude: 1.8 }, 2000);
+      world.pointOfView({ lat, lng, altitude: 1.2 }, 2000);
       setTimeout(tuneNearestStation, 2100);
     }
 
