@@ -20,10 +20,10 @@
       background-color: #ffaa00; border-radius: 50%; transform: translate(-50%, -50%);
     }
 
-    /* Buscador y desplegable superior */
+    /* Buscador y desplegable moderno superior */
     .search-container {
       position: absolute; top: 20px; left: 20px; z-index: 30;
-      display: flex; flex-direction: column; gap: 10px; max-width: 620px; width: calc(100% - 280px);
+      display: flex; flex-direction: column; gap: 10px; max-width: 580px; width: calc(100% - 280px);
     }
     .search-row { display: flex; gap: 10px; width: 100%; align-items: center; }
     
@@ -102,21 +102,20 @@
     .fav-btn { background: transparent; border: 1.5px solid rgba(255, 170, 0, 0.6); color: #ffaa00; padding: 9px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; }
     .fav-btn.active { background: #ffaa00; color: #02040a; }
 
-    /* Título centrado en el box inferior derecho */
+    /* Título destacado inferior derecho (Superpuesto en alta prioridad) */
     .branding-box {
       position: absolute; bottom: 24px; right: 24px; z-index: 999;
       background: rgba(12, 16, 28, 0.92); backdrop-filter: blur(12px);
       border: 1.5px solid rgba(255, 170, 0, 0.6); border-radius: 16px;
-      padding: 12px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 12px 20px; text-align: right;
       box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     }
     .branding-title {
       font-size: 18px; font-weight: 800; color: #ffaa00; letter-spacing: 1.5px;
       text-transform: uppercase; margin: 0; text-shadow: 0 0 12px rgba(255, 170, 0, 0.6);
-      text-align: center;
     }
     .branding-sub {
-      font-size: 11px; color: #8a99ad; margin: 3px 0 0 0; letter-spacing: 0.8px; font-weight: 600; text-align: center;
+      font-size: 11px; color: #8a99ad; margin: 3px 0 0 0; letter-spacing: 0.8px; font-weight: 600;
     }
 
     /* Ecualizador dorado */
@@ -133,18 +132,13 @@
       <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país (Enter)..." onkeydown="handleSearchKey(event)" autocomplete="off">
       <select id="genreSelect" class="genre-select" onchange="filterByGenre(this.value)">
         <option value="all">🎵 Todos los géneros</option>
-        <option value="lentos">💕 Lentos / Baladas</option>
-        <option value="folklore">🪗 Folklore</option>
         <option value="rock">🎸 Rock</option>
-        <option value="pop">🎤 Pop</option>
-        <option value="80s">📻 Años 80s / Retro</option>
         <option value="jazz">🎷 Jazz</option>
-        <option value="tango">💃 Tango</option>
-        <option value="cumbia">🪘 Cumbia / Tropical</option>
-        <option value="reggae">🌴 Reggae / Chill</option>
+        <option value="pop">🎤 Pop</option>
         <option value="news">📰 Noticias</option>
         <option value="electronic">🎧 Electrónica</option>
         <option value="classical">🎻 Clásica</option>
+        <option value="tango">💃 Tango</option>
         <option value="sports">⚽ Deportes</option>
       </select>
       <button class="geo-btn" onclick="locateOrigin()" title="Ir a mi origen">🏔️</button>
@@ -177,7 +171,7 @@
     </div>
   </div>
 
-  <!-- Cartel centrado e imponente -->
+  <!-- Cartel destacado inferior derecho -->
   <div class="branding-box">
     <h1 class="branding-title">RADIO S.C.BARILOCHE</h1>
     <p class="branding-sub">PATAGONIA ARGENTINA • GLOBAL EXPLORER</p>
@@ -188,23 +182,12 @@
   <script>
     let stations = [], currentStation = null, selectedGenre = 'all';
     
+    // Origen por defecto: San Carlos de Bariloche
     const BARILOCHE = { lat: -41.1335, lng: -71.3103, label: 'Bariloche' };
     let userOrigin = { ...BARILOCHE };
 
     let audio = new Audio();
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
-
-    // Inyección manual garantizada de "La Radio de los Lentos"
-    const CUSTOM_STATIONS = [
-      {
-        name: "La Radio de los Lentos",
-        country: "Argentina",
-        tags: "lentos baladas romantic love 80s 90s pop",
-        lat: -34.6037,
-        lng: -58.3816,
-        url: "https://stream.zeno.fm/f3wvbb7534zuv"
-      }
-    ];
 
     function getKilometers(lat1, lon1, lat2, lon2) {
       const R = 6371;
@@ -222,6 +205,7 @@
       return station.tags.includes(selectedGenre) || station.name.toLowerCase().includes(selectedGenre);
     }
 
+    // Globo 3D con Puntos e Hilos Dorados
     const world = Globe()(document.getElementById('globe'))
       .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
       .pointColor(s => isMatchGenre(s) ? '#ffaa00' : 'rgba(255, 170, 0, 0.12)')
@@ -245,6 +229,7 @@
 
     world.pointOfView({ lat: userOrigin.lat, lng: userOrigin.lng, altitude: 0.9 });
 
+    // Geolocalización Automática Dinámica
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -255,14 +240,16 @@
           };
           if (currentStation) tuneStation(currentStation);
         },
-        () => { userOrigin = { ...BARILOCHE }; }
+        (err) => {
+          userOrigin = { ...BARILOCHE };
+        }
       );
     }
 
     fetch('https://de1.api.radio-browser.info/json/stations/search?limit=8000&has_geo_info=true&order=votes&reverse=true')
       .then(r => r.json())
       .then(data => {
-        const fetched = data.map(s => ({ 
+        stations = data.map(s => ({ 
           name: s.name.trim(), 
           country: s.country, 
           tags: s.tags ? s.tags.toLowerCase() : '',
@@ -274,9 +261,6 @@
           Math.abs(s.lat) <= 90 && Math.abs(s.lng) <= 180 &&
           !(Math.abs(s.lat) < 0.1 && Math.abs(s.lng) < 0.1)
         );
-
-        // Unir emisoras API + La Radio de los Lentos
-        stations = [...CUSTOM_STATIONS, ...fetched];
 
         world.pointsData(stations);
         tuneNearestToCenter();
