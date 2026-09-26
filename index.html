@@ -190,11 +190,11 @@
     const BARILOCHE = { lat: -41.1335, lng: -71.3103, label: 'Bariloche' };
     let userOrigin = { ...BARILOCHE };
 
+    // Reproductor de audio estándar sin restricciones CORS
     let audio = new Audio();
-    audio.crossOrigin = "anonymous"; // Evita bloqueos de seguridad en navegadores
     let favorites = JSON.parse(localStorage.getItem('myRadioFavorites')) || [];
 
-    // Stream directo garantizado de La Radio de los Lentos
+    // Emisora especial inyectada directamente
     const CUSTOM_STATIONS = [
       {
         name: "La Radio de los Lentos",
@@ -202,7 +202,7 @@
         tags: "lentos baladas romantic love 80s 90s pop",
         lat: -34.6037,
         lng: -58.3816,
-        url: "https://stream.zenolive.com/f3wvbb7534zuv"
+        url: "https://stream.zeno.fm/f3wvbb7534zuv"
       }
     ];
 
@@ -298,21 +298,16 @@
         endLat: station.lat, endLng: station.lng
       }]);
 
-      audio.pause();
       audio.src = station.url;
-      audio.load();
-      
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          document.getElementById('statusText').innerText = "● SINTONIZANDO";
-          setPlayingState(true);
-        }).catch((err) => {
-          console.warn("Error de reproducción en el stream:", err);
-          document.getElementById('statusText').innerText = "⚠️ ERROR DE EMISIÓN";
-          setPlayingState(false);
-        });
-      }
+      audio.play().then(() => {
+        document.getElementById('statusText').innerText = "● SINTONIZANDO";
+        setPlayingState(true);
+      }).catch((err) => {
+        console.warn("Error en reproducción:", err);
+        document.getElementById('statusText').innerText = "⚠️ ERROR DE EMISIÓN";
+        setPlayingState(false);
+      });
+
       updateFavoritesUI();
     }
 
