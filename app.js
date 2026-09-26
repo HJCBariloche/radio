@@ -25,8 +25,8 @@
   let userOrigin = { ...BARILOCHE };
 
   let searchTimer = null;
-  let searchRequestId = 0;
   let flyTimer = null;
+  let lastPointClickTime = 0; // Control de coincidencia para clics en puntos
 
   let audio = new Audio();
   let favorites = loadFavorites();
@@ -143,7 +143,10 @@
     .arcDashGap(0.2)
     .arcDashAnimateTime(1200)
     .arcStroke(1.2)
-    .onPointClick(station => tuneStation(station));
+    .onPointClick(station => {
+      lastPointClickTime = Date.now(); // Marca tiempo de clic directo en punto
+      flyAndTune(station);
+    });
 
   world.pointOfView({ lat: BARILOCHE.lat, lng: BARILOCHE.lng, altitude: 0.9 }, 0);
 
@@ -402,12 +405,20 @@
     });
   }
 
+  // Doble clic global en el mapa (ignora si fue sobre un punto específico)
+  const globeElement = $("globe");
+  if (globeElement) {
+    globeElement.addEventListener("dblclick", () => {
+      if (Date.now() - lastPointClickTime < 600) return; // Evita conflicto con el clic del punto
+      setTimeout(tuneNearestToCenter, 50);
+    });
+  }
+
   async function loadInitialStations() {
     const popular = await apiFetch(`/json/stations/search?has_geo_info=true&order=votes&reverse=true&limit=${INITIAL_LIMIT}&hidebroken=true`);
     const normalized = popular.map(normalizeStation).filter(s => s && s.url && hasCoordinates(s));
     addStations([...CUSTOM_STATIONS.map(normalizeStation), ...normalized]);
     
-    // Búsqueda para priorizar emisoras de Bariloche
     const bariloche = await searchStations("bariloche");
     addStations(bariloche);
 
