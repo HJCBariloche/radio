@@ -1,6 +1,6 @@
 /* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Corregida: Audio Seguro (Sin bloqueo Autoplay) + Puntos Visibles
+   Versión Estable: Audio Seguro + Puntos de Tamaño 0.08 + Modo Día/Noche
    ======================================================================== */
 
 (() => {
@@ -24,7 +24,19 @@
     ANIMATION_SPEED_MS: 600,
     STATIC_DURATION_MS: 350,
     STATIC_FILE_PATH: "static-noise.ogg",
-    STORAGE_KEY: "myRadioFavorites"
+    STORAGE_KEY: "myRadioFavorites",
+    THEME_KEY: "globeTheme"
+  };
+
+  const GLOBE_THEMES = {
+    day: {
+      url: "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
+      icon: "🌙"
+    },
+    night: {
+      url: "https://unpkg.com/three-globe/example/img/earth-night.jpg",
+      icon: "☀️"
+    }
   };
 
   const CUSTOM_STATIONS = [
@@ -61,7 +73,7 @@
     favorites: [],
     flyTimer: null,
     searchTimer: null,
-    userHasInteracted: false // Bandera para evitar violaciones de Autoplay
+    userHasInteracted: false
   };
 
   const Utils = {
@@ -132,7 +144,7 @@
     },
 
     playStaticNoise() {
-      // Si el usuario aún no hizo clic en la pantalla, no intenta sonar para no romper el script
+      // Bloquea el intento de sonar si el usuario no interactuó previamente
       if (!state.userHasInteracted) return;
 
       try {
@@ -227,7 +239,7 @@
     }
   };
 
-  /* Registrar primera interacción del usuario para habilitar audio */
+  /* Escuchar interacción inicial del usuario */
   ["click", "pointerdown", "keydown"].forEach(evt => {
     window.addEventListener(evt, () => {
       state.userHasInteracted = true;
@@ -287,7 +299,7 @@
   };
 
   /* ======================================================================
-     5. GESTOR DEL GLOBO TERRAQUEO (Puntos calibrados a 0.22)
+     5. GESTOR DEL GLOBO (Puntos en 0.08 y Texturas DÍA/NOCHE)
      ====================================================================== */
   const GlobeManager = {
     instance: null,
@@ -296,11 +308,14 @@
       const elem = document.getElementById(containerId);
       if (!elem) return;
 
+      const savedTheme = localStorage.getItem(CONFIG.THEME_KEY) || "night";
+      const initialTexture = GLOBE_THEMES[savedTheme].url;
+
       this.instance = Globe()(elem)
-        .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
+        .globeImageUrl(initialTexture)
         .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.1)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.002)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.06) // Tamaño proporcional y legible
+        .pointAltitude(s => App.isMatchFilters(s) ? 0.005 : 0.001)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.08 : 0.02) // Calibración exacta para no encimarse
         .pointResolution(6)
         .polygonCapColor(() => "rgba(0,0,0,0)")
         .polygonSideColor(() => "rgba(0,0,0,0)")
@@ -315,6 +330,22 @@
 
       this.instance.pointOfView({ lat: CONFIG.BARILOCHE.lat, lng: CONFIG.BARILOCHE.lng, altitude: 0.9 }, 0);
       this.loadCountryBorders();
+      this.updateThemeButton(savedTheme);
+    },
+
+    setTheme(theme) {
+      const active = GLOBE_THEMES[theme] || GLOBE_THEMES.night;
+      if (this.instance) {
+        this.instance.globeImageUrl(active.url);
+      }
+      this.updateThemeButton(theme);
+    },
+
+    updateThemeButton(theme) {
+      const btn = Utils.$("themeBtn");
+      if (btn) {
+        btn.textContent = GLOBE_THEMES[theme].icon;
+      }
     },
 
     loadCountryBorders() {
@@ -338,8 +369,8 @@
       if (this.instance) {
         this.instance
           .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.1)")
-          .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.002)
-          .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.06);
+          .pointAltitude(s => App.isMatchFilters(s) ? 0.005 : 0.001)
+          .pointRadius(s => App.isMatchFilters(s) ? 0.08 : 0.02);
       }
     },
 
@@ -369,7 +400,7 @@
   };
 
   /* ======================================================================
-     6. INTERFAZ DE USUARIO Y CONTROLADOR
+     6. INTERFAZ Y APLICACIÓN
      ====================================================================== */
   const UI = {
     updateCard(station, userOrigin) {
@@ -503,6 +534,7 @@
 
     bindEvents() {
       window.toggleHD = () => this.toggleHD();
+      window.toggleTheme = () => this.toggleTheme();
       window.filterByGenre = (genre) => this.filterByGenre(genre);
       window.playRandomStation = () => this.playRandomStation();
       window.toggleAudio = () => this.toggleAudio();
@@ -591,7 +623,7 @@
       if (state.flyTimer) clearTimeout(state.flyTimer);
       AudioEngine.stopStream();
 
-      // Solo hace sonido si no es la carga inicial silenciosa
+      // No dispara el sonido si es la carga automática inicial
       if (!isInitial) {
         AudioEngine.playStaticNoise();
       }
@@ -650,6 +682,13 @@
       const hdBtn = Utils.$("hdBtn");
       if (hdBtn) hdBtn.classList.toggle("active", state.onlyHD);
       GlobeManager.refreshPointStyles();
+    },
+
+    toggleTheme() {
+      const current = localStorage.getItem(CONFIG.THEME_KEY) || "night";
+      const next = current === "day" ? "night" : "day";
+      localStorage.setItem(CONFIG.THEME_KEY, next);
+      GlobeManager.setTheme(next);
     },
 
     filterByGenre(genre) {
