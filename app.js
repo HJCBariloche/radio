@@ -1,6 +1,6 @@
-//* ========================================================================
+/* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Optimizada: Puntos Reducidos + Soporte Audio estatica.ogg
+   Fix: Nombre de archivo static-noise.ogg + Puntos Ultra-Finos (0.015)
    ======================================================================== */
 
 (() => {
@@ -23,7 +23,7 @@
     SEARCH_LIMIT: 100,
     ANIMATION_SPEED_MS: 600,
     STATIC_DURATION_MS: 350,
-    STATIC_FILE_PATH: "estatica.ogg",
+    STATIC_FILE_PATH: "static-noise.ogg", // Nombre corregido según GitHub
     STORAGE_KEY: "myRadioFavorites"
   };
 
@@ -50,7 +50,7 @@
   ];
 
   /* ======================================================================
-     2. GESTOR DE ESTADO
+     2. GESTOR DE ESTADO Y UTILIDADES
      ====================================================================== */
   const state = {
     stations: [],
@@ -63,7 +63,6 @@
     searchTimer: null
   };
 
-  /* Utilitarios */
   const Utils = {
     $: (id) => document.getElementById(id),
     cleanText: (val) => String(val ?? "").trim(),
@@ -114,7 +113,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO (Con soporte para estatica.ogg + Fallback WebAudio)
+     3. MOTOR DE AUDIO
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -132,10 +131,9 @@
     },
 
     playStaticNoise() {
-      // 1. Intenta reproducir el archivo estatica.ogg
       try {
         this.staticPlayer.currentTime = 0;
-        this.staticPlayer.volume = 0.3;
+        this.staticPlayer.volume = 0.4;
         const playPromise = this.staticPlayer.play();
 
         if (playPromise !== undefined) {
@@ -146,7 +144,6 @@
               }, CONFIG.STATIC_DURATION_MS);
             })
             .catch(() => {
-              // Si falla el archivo ogg, usa el sintetizador como respaldo
               this.playSyntheticStatic();
             });
         }
@@ -230,7 +227,7 @@
   });
 
   /* ======================================================================
-     4. PERSISTENCIA Y API RADIOS
+     4. PERSISTENCIA Y API
      ====================================================================== */
   const StorageManager = {
     loadFavorites() {
@@ -281,7 +278,7 @@
   };
 
   /* ======================================================================
-     5. GESTOR DEL GLOBO (Puntos ajustados a tamaño elegante 0.10)
+     5. GESTOR DEL GLOBO (Puntos reducidos a 0.015 para máxima definición)
      ====================================================================== */
   const GlobeManager = {
     instance: null,
@@ -290,8 +287,8 @@
       this.instance = Globe()(document.getElementById(containerId))
         .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
         .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.10 : 0.02) // Reducido para evitar manchas gigantes
+        .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.001)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.015 : 0.003) // Tamaño micro-fino
         .pointResolution(6)
         .polygonCapColor(() => "rgba(0,0,0,0)")
         .polygonSideColor(() => "rgba(0,0,0,0)")
@@ -326,8 +323,8 @@
     refreshPointStyles() {
       this.instance
         .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.10 : 0.02);
+        .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.001)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.015 : 0.003);
     },
 
     drawArc(origin, destination) {
@@ -353,7 +350,7 @@
   };
 
   /* ======================================================================
-     6. UI Y CONTROLADOR PRINCIPAL
+     6. CONTROLADOR DE INTERFAZ Y APLICACIÓN
      ====================================================================== */
   const UI = {
     updateCard(station, userOrigin) {
@@ -570,7 +567,6 @@
       if (state.flyTimer) clearTimeout(state.flyTimer);
       AudioEngine.stopStream();
 
-      // Reproduce la estática (desde estatica.ogg o sintetizada)
       AudioEngine.playStaticNoise();
 
       const normalized = Utils.normalizeStation(station);
