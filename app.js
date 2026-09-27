@@ -1,6 +1,6 @@
 /* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Audio Seguro + Puntos de Tamaño 0.08 + Modo Día/Noche
+   Versión Estable: Puntos Calibrados (0.12) + Autoplay Seguro + Día/Noche
    ======================================================================== */
 
 (() => {
@@ -19,7 +19,7 @@
       lng: -71.3103,
       label: "Bariloche"
     },
-    INITIAL_LIMIT: 8000,
+    INITIAL_LIMIT: 4000,
     SEARCH_LIMIT: 100,
     ANIMATION_SPEED_MS: 600,
     STATIC_DURATION_MS: 350,
@@ -144,7 +144,6 @@
     },
 
     playStaticNoise() {
-      // Bloquea el intento de sonar si el usuario no interactuó previamente
       if (!state.userHasInteracted) return;
 
       try {
@@ -239,7 +238,7 @@
     }
   };
 
-  /* Escuchar interacción inicial del usuario */
+  /* Registrar interacción inicial */
   ["click", "pointerdown", "keydown"].forEach(evt => {
     window.addEventListener(evt, () => {
       state.userHasInteracted = true;
@@ -275,7 +274,7 @@
       for (const server of CONFIG.SERVERS) {
         try {
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 8000);
+          const timer = setTimeout(() => controller.abort(), 12000);
           const res = await fetch(server + path, { signal: controller.signal });
           clearTimeout(timer);
           if (res.ok) return await res.json();
@@ -299,7 +298,7 @@
   };
 
   /* ======================================================================
-     5. GESTOR DEL GLOBO (Puntos en 0.08 y Texturas DÍA/NOCHE)
+     5. GESTOR DEL GLOBO TERRAQUEO (Puntos calibrados a 0.12)
      ====================================================================== */
   const GlobeManager = {
     instance: null,
@@ -313,13 +312,13 @@
 
       this.instance = Globe()(elem)
         .globeImageUrl(initialTexture)
-        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.1)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.005 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.08 : 0.02) // Calibración exacta para no encimarse
+        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.15)")
+        .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.002)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.12 : 0.03)
         .pointResolution(6)
         .polygonCapColor(() => "rgba(0,0,0,0)")
         .polygonSideColor(() => "rgba(0,0,0,0)")
-        .polygonStrokeColor(() => "rgba(255,170,0,0.2)")
+        .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
         .arcColor(() => ["#ffaa00", "rgba(255,170,0,0.1)"])
         .arcAltitude(0.2)
         .arcDashLength(0.4)
@@ -368,9 +367,9 @@
     refreshPointStyles() {
       if (this.instance) {
         this.instance
-          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.1)")
-          .pointAltitude(s => App.isMatchFilters(s) ? 0.005 : 0.001)
-          .pointRadius(s => App.isMatchFilters(s) ? 0.08 : 0.02);
+          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.15)")
+          .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.002)
+          .pointRadius(s => App.isMatchFilters(s) ? 0.12 : 0.03);
       }
     },
 
@@ -454,7 +453,7 @@
 
       favList.innerHTML = "";
       if (!favorites.length) {
-        favList.innerHTML = '<p style="font-size:11px; color:#666; margin:0;">Sin favoritos</p>';
+        favList.innerHTML = '<p style="font-size:12px; color:#666; margin:0;">Sin favoritos</p>';
         return;
       }
 
@@ -623,7 +622,6 @@
       if (state.flyTimer) clearTimeout(state.flyTimer);
       AudioEngine.stopStream();
 
-      // No dispara el sonido si es la carga automática inicial
       if (!isInitial) {
         AudioEngine.playStaticNoise();
       }
