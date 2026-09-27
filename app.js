@@ -1,6 +1,6 @@
-/* ========================================================================
+//* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Arquitectura Refactorizada: Modular, Optimizada y de Alto Rendimiento
+   Versión Optimizada: Puntos Reducidos + Soporte Audio estatica.ogg
    ======================================================================== */
 
 (() => {
@@ -22,11 +22,11 @@
     INITIAL_LIMIT: 8000,
     SEARCH_LIMIT: 100,
     ANIMATION_SPEED_MS: 600,
-    STATIC_DURATION_SEC: 0.35,
+    STATIC_DURATION_MS: 350,
+    STATIC_FILE_PATH: "estatica.ogg",
     STORAGE_KEY: "myRadioFavorites"
   };
 
-  /* Emisoras destacadas predeterminadas */
   const CUSTOM_STATIONS = [
     {
       stationuuid: "custom-radio-lentos",
@@ -63,23 +63,23 @@
     searchTimer: null
   };
 
-  /* Utilitarios matemáticos y de formateo */
+  /* Utilitarios */
   const Utils = {
     $: (id) => document.getElementById(id),
     cleanText: (val) => String(val ?? "").trim(),
-    
+
     getKilometers(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 + 
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                 Math.sin(dLon / 2) ** 2;
       return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))));
     },
 
     hasCoordinates(station) {
-      return station && 
+      return station &&
              Number.isFinite(station.lat) && Number.isFinite(station.lng) &&
              Math.abs(station.lat) <= 90 && Math.abs(station.lng) <= 180 &&
              !(Math.abs(station.lat) < 0.1 && Math.abs(station.lng) < 0.1);
@@ -114,10 +114,11 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO Y SINTETIZADOR WEB AUDIO
+     3. MOTOR DE AUDIO (Con soporte para estatica.ogg + Fallback WebAudio)
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
+    staticPlayer: new Audio(CONFIG.STATIC_FILE_PATH),
     audioCtx: null,
 
     initContext() {
@@ -130,7 +131,31 @@
       }
     },
 
-    playStaticNoise(duration = CONFIG.STATIC_DURATION_SEC) {
+    playStaticNoise() {
+      // 1. Intenta reproducir el archivo estatica.ogg
+      try {
+        this.staticPlayer.currentTime = 0;
+        this.staticPlayer.volume = 0.3;
+        const playPromise = this.staticPlayer.play();
+
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setTimeout(() => {
+                this.staticPlayer.pause();
+              }, CONFIG.STATIC_DURATION_MS);
+            })
+            .catch(() => {
+              // Si falla el archivo ogg, usa el sintetizador como respaldo
+              this.playSyntheticStatic();
+            });
+        }
+      } catch (e) {
+        this.playSyntheticStatic();
+      }
+    },
+
+    playSyntheticStatic(duration = 0.35) {
       try {
         this.initContext();
         if (!this.audioCtx) return;
@@ -155,9 +180,7 @@
         gain.connect(ctx.destination);
 
         whiteNoise.start();
-      } catch (e) {
-        // Ignorar restricciones o fallos menores de audio
-      }
+      } catch (e) {}
     },
 
     playStream(sources, onStatusChange, onError) {
@@ -202,13 +225,12 @@
     }
   };
 
-  /* Desbloquear AudioContext con interacción inicial del usuario */
   ["click", "pointerdown", "keydown"].forEach(evt => {
     window.addEventListener(evt, () => AudioEngine.initContext(), { once: true });
   });
 
   /* ======================================================================
-     4. PERSISTENCIA EN LOCALSTORAGE
+     4. PERSISTENCIA Y API RADIOS
      ====================================================================== */
   const StorageManager = {
     loadFavorites() {
@@ -230,9 +252,6 @@
     }
   };
 
-  /* ======================================================================
-     5. SERVICIO API DE RADIOS
-     ====================================================================== */
   const RadioAPI = {
     async fetchServer(path) {
       for (const server of CONFIG.SERVERS) {
@@ -262,7 +281,7 @@
   };
 
   /* ======================================================================
-     6. GESTOR DEL GLOBO TERRAQUEO (GLOBE.GL)
+     5. GESTOR DEL GLOBO (Puntos ajustados a tamaño elegante 0.10)
      ====================================================================== */
   const GlobeManager = {
     instance: null,
@@ -272,7 +291,7 @@
         .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
         .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
         .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.35 : 0.05)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.10 : 0.02) // Reducido para evitar manchas gigantes
         .pointResolution(6)
         .polygonCapColor(() => "rgba(0,0,0,0)")
         .polygonSideColor(() => "rgba(0,0,0,0)")
@@ -308,7 +327,7 @@
       this.instance
         .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
         .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.35 : 0.05);
+        .pointRadius(s => App.isMatchFilters(s) ? 0.10 : 0.02);
     },
 
     drawArc(origin, destination) {
@@ -334,7 +353,7 @@
   };
 
   /* ======================================================================
-     7. CONTROLADOR DE INTERFAZ DE USUARIO (UI)
+     6. UI Y CONTROLADOR PRINCIPAL
      ====================================================================== */
   const UI = {
     updateCard(station, userOrigin) {
@@ -457,9 +476,6 @@
     }
   };
 
-  /* ======================================================================
-     8. APLICACIÓN PRINCIPAL Y ORQUESTADOR
-     ====================================================================== */
   const App = {
     init() {
       state.favorites = StorageManager.loadFavorites();
@@ -470,7 +486,6 @@
     },
 
     bindEvents() {
-      /* Exposición de funciones globales requeridas por el HTML */
       window.toggleHD = () => this.toggleHD();
       window.filterByGenre = (genre) => this.filterByGenre(genre);
       window.playRandomStation = () => this.playRandomStation();
@@ -479,7 +494,6 @@
       window.locateOrigin = () => this.locateOrigin();
       window.handleSearchKey = (e) => this.handleSearchKey(e);
 
-      /* Cerrar dropdown al hacer clic fuera del buscador */
       document.addEventListener("click", (e) => {
         const container = document.querySelector(".search-container");
         if (container && !container.contains(e.target)) {
@@ -533,7 +547,6 @@
     },
 
     isMatchFilters(station) {
-      /* Filtro por Género */
       let matchGenre = true;
       if (state.selectedGenre !== "all") {
         const tags = station.tags || "";
@@ -541,7 +554,6 @@
         matchGenre = tags.includes(state.selectedGenre) || name.includes(state.selectedGenre);
       }
 
-      /* Filtro HQ / HD */
       let matchHD = true;
       if (state.onlyHD) {
         const bitrate = station.bitrate || 0;
@@ -558,7 +570,7 @@
       if (state.flyTimer) clearTimeout(state.flyTimer);
       AudioEngine.stopStream();
 
-      /* Sonido analógico de dial instantáneo */
+      // Reproduce la estática (desde estatica.ogg o sintetizada)
       AudioEngine.playStaticNoise();
 
       const normalized = Utils.normalizeStation(station);
@@ -646,8 +658,8 @@
     },
 
     updateFavoritesUI() {
-      const isFav = state.currentStation ? 
-        state.favorites.some(f => Utils.stationKey(f) === Utils.stationKey(state.currentStation)) : 
+      const isFav = state.currentStation ?
+        state.favorites.some(f => Utils.stationKey(f) === Utils.stationKey(state.currentStation)) :
         false;
 
       UI.updateFavoriteButton(isFav);
@@ -714,7 +726,6 @@
     }
   };
 
-  /* Inicializar cuando el DOM esté listo */
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => App.init());
   } else {
