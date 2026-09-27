@@ -3,15 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Radio S.C. Bariloche - Global Explorer</title>
+  <title>RADIO S.C.BARILOCHE - Global Radio Explorer</title>
   
-  <!-- Tipografía legible Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Librería 3D Globe -->
-  <script src="https://unpkg.com/three"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/globe.gl"></script>
 
   <style>
@@ -26,12 +22,12 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #030508;
-      font-family: 'Inter', sans-serif;
+      background-color: #02040a;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: #ffffff;
     }
 
-    #globe-container {
+    #globe {
       width: 100vw;
       height: 100vh;
       position: absolute;
@@ -40,671 +36,442 @@
       z-index: 1;
     }
 
-    /* BARRA SUPERIOR */
-    .top-bar {
+    /* Mirilla central dorada */
+    .crosshair {
       position: absolute;
-      top: 24px;
-      left: 24px;
-      right: 24px;
-      z-index: 10;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      top: 50%;
+      left: 50%;
+      width: 26px;
+      height: 26px;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255, 170, 0, 0.85);
+      border-radius: 50%;
       pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 0 14px rgba(255, 170, 0, 0.7);
+    }
+    .crosshair::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background-color: #ffaa00;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
     }
 
-    .top-controls-left {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      pointer-events: auto;
-    }
-
+    /* CONTROLES SUPERIORES (IZQUIERDA) */
     .search-container {
-      position: relative;
-      width: 320px;
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 680px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
 
     .search-input {
-      width: 100%;
-      background: rgba(13, 17, 23, 0.92);
+      width: 260px;
+      padding: 10px 18px;
+      border-radius: 24px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
       backdrop-filter: blur(12px);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      border-radius: 25px;
-      padding: 12px 20px;
       color: #fff;
-      font-size: 16px; /* Letra grande */
+      font-size: 14px;
       outline: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
       transition: all 0.2s ease;
     }
-
     .search-input:focus {
       border-color: #ffaa00;
-      box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+      box-shadow: 0 0 14px rgba(255, 170, 0, 0.5);
+    }
+    .search-input::placeholder { color: #8a99ad; }
+
+    .genre-select {
+      padding: 10px 18px;
+      border-radius: 24px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #ffaa00;
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s ease;
+    }
+    .genre-select option {
+      background-color: #0c101c;
+      color: #fff;
+      font-size: 14px;
     }
 
-    .search-results {
-      position: absolute;
-      top: 115%;
-      left: 0;
-      right: 0;
-      background: rgba(13, 17, 23, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 14px;
-      max-height: 280px;
+    .btn-top {
+      height: 42px;
+      padding: 0 16px;
+      border-radius: 21px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #ffaa00;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-top:hover {
+      border-color: #ffaa00;
+      transform: scale(1.05);
+    }
+    .btn-top.active {
+      background: #ffaa00;
+      color: #02040a;
+    }
+
+    .geo-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #ffaa00;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: transform 0.2s ease;
+    }
+    .geo-btn:hover {
+      transform: scale(1.08);
+      border-color: #ffaa00;
+    }
+
+    .results-dropdown {
+      background: rgba(12, 16, 28, 0.96);
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      border-radius: 16px;
+      max-height: 220px;
       overflow-y: auto;
       display: none;
-      z-index: 20;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
     }
-
     .results-item {
-      padding: 12px 18px;
-      font-size: 15px;
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #ddd;
       cursor: pointer;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      transition: background 0.15s ease;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
     }
-
     .results-item:hover {
       background: rgba(255, 170, 0, 0.25);
       color: #ffaa00;
     }
 
-    .btn-top, .select-top {
-      background: rgba(13, 17, 23, 0.92);
+    /* PANEL FAVORITOS (DERECHA SUPERIOR) */
+    .fav-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(12, 16, 28, 0.95);
       backdrop-filter: blur(12px);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      border-radius: 25px;
-      padding: 12px 20px;
-      color: #fff;
-      font-size: 15px; /* Letra grande */
-      font-weight: 600;
-      cursor: pointer;
-      outline: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      border-radius: 16px;
+      padding: 14px 18px;
+      z-index: 30;
+      width: 260px;
+      max-height: 260px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
     }
-
-    .btn-top:hover, .select-top:hover {
-      border-color: #ffaa00;
+    .fav-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
       color: #ffaa00;
-    }
-
-    .btn-top.active {
-      background: #ffaa00;
-      color: #000;
+      letter-spacing: 0.5px;
       font-weight: 700;
     }
-
-    /* PANEL FAVORITOS */
-    .fav-panel {
-      pointer-events: auto;
-      background: rgba(13, 17, 23, 0.92);
-      backdrop-filter: blur(12px);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      border-radius: 16px;
-      padding: 16px 20px;
-      width: 320px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
-
-    .fav-title {
-      font-size: 15px;
-      font-weight: 800;
-      color: #ffaa00;
-      margin-bottom: 12px;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .fav-list {
-      max-height: 180px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
     .fav-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 14px;
-      padding: 6px 4px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      cursor: pointer;
-    }
-
-    .fav-item:hover {
-      color: #ffaa00;
-    }
-
-    .fav-remove {
-      color: #ff5555;
-      font-weight: bold;
-      padding: 2px 8px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-
-    .fav-remove:hover {
-      background: rgba(255, 85, 85, 0.2);
-    }
-
-    /* TARJETA DE REPRODUCCIÓN (INFERIOR IZQUIERDA) */
-    .player-card {
-      position: absolute;
-      bottom: 28px;
-      left: 28px;
-      z-index: 10;
-      background: rgba(13, 17, 23, 0.94);
-      backdrop-filter: blur(16px);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      border-radius: 20px;
-      padding: 24px;
-      width: 400px; /* Tarjeta más ancha */
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
-    }
-
-    .card-status {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 1.2px;
-      color: #ffaa00;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      color: #dddddd;
     }
+    .fav-item span:hover { color: #ffaa00; }
 
-    .card-title {
-      font-size: 20px; /* Título bien grande */
-      font-weight: 800;
+    /* TARJETA REPRODUCTOR (IZQUIERDA INFERIOR) */
+    .card {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      padding: 20px 24px;
+      border-radius: 18px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      z-index: 30;
+      width: 360px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #ffaa00;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .card h2 {
+      margin: 0 0 4px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-bottom: 6px;
-      color: #ffffff;
+    }
+    .card p {
+      margin: 3px 0;
+      font-size: 14px;
+      color: #abb8c7;
+    }
+    .distance-tag {
+      font-size: 13px;
+      color: #ffaa00;
+      font-weight: 700;
+      margin-top: 6px;
+      display: block;
+    }
+    .bitrate-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffaa00;
+      background: rgba(255, 170, 0, 0.15);
+      border: 1px solid rgba(255, 170, 0, 0.4);
+      border-radius: 8px;
+      padding: 3px 10px;
+      margin-top: 8px;
+    }
+    .hint-tag {
+      font-size: 11px;
+      color: #667788;
+      margin-top: 6px;
+      display: block;
+      font-style: italic;
     }
 
-    .card-subtitle {
-      font-size: 15px;
-      color: #dddddd;
-      margin-bottom: 6px;
+    .controls {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
+      margin-top: 16px;
     }
-
-    .card-distance {
-      font-size: 14px;
-      color: #aaaaaa;
-      margin-bottom: 18px;
-    }
-
-    .controls-row {
-      display: flex;
-      gap: 12px;
-    }
-
-    .btn-action {
+    .btn-play {
       flex: 1;
       background: #ffaa00;
       border: none;
-      border-radius: 25px;
-      padding: 12px;
-      color: #000;
-      font-size: 15px; /* Botón bien legible */
-      font-weight: 800;
+      color: #02040a;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-weight: 700;
       cursor: pointer;
+      font-size: 14px;
       transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+      text-align: center;
     }
-
-    .btn-action:hover {
+    .btn-play:hover {
       background: #ffc44d;
-      transform: translateY(-2px);
+      transform: scale(1.02);
     }
-
-    .btn-sec {
-      background: rgba(255, 255, 255, 0.12);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      color: #fff;
+    .btn-random {
+      background: rgba(255, 170, 0, 0.15);
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      color: #ffaa00;
+      padding: 10px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.2s ease;
     }
-
-    .btn-sec:hover {
-      background: rgba(255, 255, 255, 0.25);
+    .btn-random:hover {
+      background: rgba(255, 170, 0, 0.3);
+      transform: scale(1.02);
     }
-
-    .btn-sec.active {
-      background: rgba(255, 0, 85, 0.25);
-      border-color: #ff0055;
-      color: #ff0055;
+    .btn-fav {
+      background: transparent;
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      color: #ffaa00;
+      padding: 10px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .btn-fav.active {
+      background: #ffaa00;
+      color: #02040a;
     }
 
     /* ECUALIZADOR ANIMADO */
     .eq-bars {
-      display: inline-flex;
+      display: none;
       align-items: flex-end;
       gap: 3px;
-      height: 16px;
+      height: 14px;
     }
-
     .eq-bar {
       width: 3px;
       background: #ffaa00;
-      animation: bounce 0.8s infinite alternate ease-in-out;
+      animation: eqAnim 0.8s infinite alternate ease-in-out;
     }
-
     .eq-bar:nth-child(2) { animation-delay: 0.2s; }
     .eq-bar:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes bounce {
-      0% { height: 4px; }
-      100% { height: 16px; }
+    @keyframes eqAnim {
+      0% { height: 3px; }
+      100% { height: 14px; }
     }
 
-    /* BRANDING INFERIOR DERECHO */
-    .brand-card {
+    /* CARTEL DORADO CENTRADO (DERECHA INFERIOR) */
+    .branding-box {
       position: absolute;
-      bottom: 28px;
-      right: 28px;
-      z-index: 10;
-      background: rgba(13, 17, 23, 0.92);
+      bottom: 24px;
+      right: 24px;
+      z-index: 30;
+      background: rgba(12, 16, 28, 0.95);
       backdrop-filter: blur(12px);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      border-radius: 14px;
-      padding: 14px 20px;
-      text-align: right;
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      border-radius: 16px;
+      padding: 14px 26px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 260px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     }
-
-    .brand-title {
-      font-size: 16px; /* Texto destacado */
+    .branding-title {
+      font-size: 19px;
       font-weight: 800;
       color: #ffaa00;
-      letter-spacing: 0.5px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin: 0;
+      text-shadow: 0 0 14px rgba(255, 170, 0, 0.7);
+      text-align: center;
+      width: 100%;
+      display: block;
     }
-
-    .brand-sub {
-      font-size: 12px;
-      color: #bbb;
+    .branding-sub {
+      font-size: 11px;
+      color: #8a99ad;
+      margin: 4px 0 0 0;
       letter-spacing: 1px;
-      margin-top: 3px;
-    }
-
-    /* BARRA DE DESPLAZAMIENTO (SCROLLBAR) */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.2);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255,170,0,0.5);
-      border-radius: 3px;
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+      display: block;
     }
   </style>
 </head>
 <body>
 
-  <!-- CONTENEDOR DE PLANETA 3D -->
-  <div id="globe-container"></div>
-
-  <!-- BARRA SUPERIOR DE BÚSQUEDA Y FILTROS -->
-  <div class="top-bar">
-    <div class="top-controls-left">
-      <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país..." autocomplete="off">
-        <div id="searchResults" class="search-results"></div>
-      </div>
-
-      <select id="genreSelect" class="select-top">
-        <option value="ALL">🎵 Todos los géneros</option>
-        <option value="Tango">Tango</option>
-        <option value="Ballads">Baladas / Lentos</option>
-        <option value="Classic">Clásica</option>
-        <option value="Rock">Rock / Pop</option>
+  <!-- BARRA DE BÚSQUEDA Y FILTROS SUPERIORES -->
+  <div class="search-container">
+    <div class="search-row">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país..." onkeydown="handleSearchKey(event)" autocomplete="off">
+      
+      <select id="genreSelect" class="genre-select" onchange="filterByGenre(this.value)">
+        <option value="all">🎵 Todos los géneros</option>
+        <option value="lentos">💕 Lentos / Baladas</option>
+        <option value="folklore">🪗 Folklore</option>
+        <option value="rock">🎸 Rock</option>
+        <option value="pop">🎤 Pop</option>
+        <option value="80s">📻 Años 80s / Retro</option>
+        <option value="jazz">🎷 Jazz</option>
+        <option value="tango">💃 Tango</option>
+        <option value="cumbia">🪘 Cumbia / Tropical</option>
+        <option value="reggae">🌴 Reggae / Chill</option>
+        <option value="news">📰 Noticias</option>
+        <option value="electronic">🎧 Electrónica</option>
+        <option value="classical">🎻 Clásica</option>
       </select>
 
-      <button id="hqBtn" class="btn-top">HQ</button>
-      <button id="themeBtn" class="btn-top">☀️</button>
+      <button id="hdBtn" class="btn-top" onclick="toggleHD()" title="Solo Alta Calidad HQ">HQ</button>
+      <button id="themeBtn" class="btn-top" onclick="toggleTheme()" title="Modo Día / Noche">☀️</button>
+      <button class="geo-btn" onclick="locateOrigin()" title="Ir a mi ubicación">🏔️</button>
     </div>
-
-    <!-- PANEL DE FAVORITOS (ARRIBA DERECHA) -->
-    <div class="fav-panel">
-      <div class="fav-title">
-        <span>★ MIS FAVORITAS</span>
-        <span id="favCount" style="font-size:12px; color:#aaa;">(0)</span>
-      </div>
-      <div class="fav-list" id="favList">
-        <!-- Generado dinámicamente -->
-      </div>
-    </div>
+    <div id="searchResults" class="results-dropdown"></div>
   </div>
 
-  <!-- TARJETA DEL REPRODUCTOR (ABAJO IZQUIERDA) -->
-  <div class="player-card">
-    <div class="card-status">
-      <span>• SINTONIZANDO</span>
+  <!-- PANEL DE FAVORITOS -->
+  <div class="fav-panel">
+    <h3>⭐ MIS FAVORITAS</h3>
+    <div id="favList"></div>
+  </div>
+
+  <div class="crosshair"></div>
+
+  <!-- REPRODUCTOR INFERIOR IZQUIERDO -->
+  <div class="card">
+    <div class="status-badge">
+      <span id="statusText">● SINTONIZANDO</span>
       <div class="eq-bars" id="eqBars">
         <div class="eq-bar"></div>
         <div class="eq-bar"></div>
         <div class="eq-bar"></div>
       </div>
     </div>
-
-    <div class="card-title" id="radioTitle">Seleccioná una radio</div>
-    <div class="card-subtitle" id="radioCountry">📍 Haz clic en un punto dorado del mapa</div>
-    <div class="card-distance" id="radioDistance">📐 Distancia: -</div>
-
-    <div class="controls-row">
-      <button class="btn-action" id="playBtn">▶ Pausa</button>
-      <button class="btn-action btn-sec" id="surpriseBtn">🎲 Sorpréndeme</button>
-      <button class="btn-action btn-sec" id="favToggleBtn">♥ Guardar</button>
+    <h2 id="name">Buscando emisoras...</h2>
+    <p id="country">📍 -</p>
+    <span id="distance" class="distance-tag"></span>
+    <span id="bitrateBadge" class="bitrate-badge" style="display:none;"></span>
+    <span class="hint-tag">💡 Mové el globo y hacé clic para cambiar de radio</span>
+    
+    <div class="controls">
+      <button class="btn-play" id="playBtn" onclick="toggleAudio()">▶ Reprod.</button>
+      <button class="btn-random" onclick="playRandomStation()" title="Radio Aleatoria">🎲 Sorpréndeme</button>
+      <button class="btn-fav" id="favBtn" onclick="toggleFavorite()">♡ Guardar</button>
     </div>
   </div>
 
-  <!-- MARCA Y UBICACIÓN DE BARILOCHE (ABAJO DERECHA) -->
-  <div class="brand-card">
-    <div class="brand-title">RADIO S.C.BARILOCHE</div>
-    <div class="brand-sub">PATAGONIA ARGENTINA • GLOBAL EXPLORER</div>
+  <!-- CARTEL CENTRADO INFERIOR DERECHO -->
+  <div class="branding-box">
+    <h1 class="branding-title">RADIO S.C.BARILOCHE</h1>
+    <p class="branding-sub">PATAGONIA ARGENTINA • GLOBAL EXPLORER</p>
   </div>
 
-  <!-- REPRODUCTOR AUDIO OCULTO -->
-  <audio id="audioPlayer" preload="none"></audio>
+  <!-- CONTENEDOR DEL GLOBO -->
+  <div id="globe"></div>
 
-  <script>
-    // LISTA DE EMISORAS DE EJEMPLO (Con coordenadas reales)
-    const stations = [
-      {
-        id: '1',
-        name: 'LaRadioDeLosLentos - Just Ballads',
-        country: 'Argentina',
-        city: 'Buenos Aires',
-        lat: -34.6037,
-        lng: -58.3816,
-        genre: 'Ballads',
-        url: 'https://stream.zeno.fm/f3wvbb1v08quv'
-      },
-      {
-        id: '2',
-        name: 'Tango Berlin',
-        country: 'Alemania',
-        city: 'Berlín',
-        lat: 52.5200,
-        lng: 13.4050,
-        genre: 'Tango',
-        url: 'https://stream.zeno.fm/07r13tw238quv'
-      },
-      {
-        id: '3',
-        name: 'Sveriges Radio P2 FLAC',
-        country: 'Suecia',
-        city: 'Estocolmo',
-        lat: 59.3293,
-        lng: 18.0686,
-        genre: 'Classic',
-        url: 'https://http-live.sr.se/p2music-mp3-192'
-      },
-      {
-        id: '4',
-        name: 'Radio Nacional Bariloche',
-        country: 'Argentina',
-        city: 'San Carlos de Bariloche',
-        lat: -41.1335,
-        lng: -71.3103,
-        genre: 'Rock',
-        url: 'https://cdn.instream.audio/8000/stream'
-      },
-      {
-        id: '5',
-        name: 'Radio Swiss Classic',
-        country: 'Suiza',
-        city: 'Berna',
-        lat: 46.9480,
-        lng: 7.4474,
-        genre: 'Classic',
-        url: 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128'
-      }
-    ];
-
-    // COORDENADAS DE BARILOCHE
-    const BARILOCHE_LAT = -41.1335;
-    const BARILOCHE_LNG = -71.3103;
-
-    // ESTADO DE LA APLICACIÓN
-    let currentStation = null;
-    let isPlaying = false;
-    let favorites = ['1', '2', '3']; // IDs por defecto para mostrar
-
-    // ELEMENTOS DEL DOM
-    const audioPlayer = document.getElementById('audioPlayer');
-    const playBtn = document.getElementById('playBtn');
-    const surpriseBtn = document.getElementById('surpriseBtn');
-    const favToggleBtn = document.getElementById('favToggleBtn');
-    const radioTitle = document.getElementById('radioTitle');
-    const radioCountry = document.getElementById('radioCountry');
-    const radioDistance = document.getElementById('radioDistance');
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    const genreSelect = document.getElementById('genreSelect');
-    const favList = document.getElementById('favList');
-    const favCount = document.getElementById('favCount');
-    const eqBars = document.getElementById('eqBars');
-
-    // FÓRMULA DE DISTANCIA (HAVERSINE)
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Radio de la Tierra en Km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return Math.round(R * c);
-    }
-
-    // INICIALIZACIÓN DEL GLOBO 3D
-    const world = Globe()
-      (document.getElementById('globe-container'))
-      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
-      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(stations)
-      .pointLat('lat')
-      .pointLng('lng')
-      .pointColor(() => '#ffaa00')
-      .pointAltitude(0.04)
-      .pointRadius(0.6)
-      .pointResolution(32)
-      .onPointClick(station => tuneStation(station));
-
-    // Ajustar punto de vista inicial hacia Argentina / Sudamérica
-    world.pointOfView({ lat: -38, lng: -63, altitude: 2.2 }, 1000);
-
-    // REPRODUCIR EMISORA
-    function tuneStation(station) {
-      currentStation = station;
-      radioTitle.textContent = station.name;
-      radioCountry.textContent = `📍 ${station.city}, ${station.country}`;
-      
-      const dist = calculateDistance(BARILOCHE_LAT, BARILOCHE_LNG, station.lat, station.lng);
-      radioDistance.textContent = `📐 A ${dist.toLocaleString()} km de tu ubicación`;
-
-      // Cargar stream
-      audioPlayer.src = station.url;
-      audioPlayer.play().then(() => {
-        isPlaying = true;
-        updatePlayButton();
-      }).catch(e => {
-        console.log("Error de reproducción:", e);
-        isPlaying = false;
-        updatePlayButton();
-      });
-
-      // Mover cámara suavemente hacia la radio seleccionada
-      world.pointOfView({ lat: station.lat, lng: station.lng, altitude: 1.8 }, 1500);
-
-      updateFavButtonState();
-    }
-
-    // BOTÓN PLAY / PAUSA
-    playBtn.addEventListener('click', () => {
-      if (!currentStation) {
-        tuneStation(stations[0]);
-        return;
-      }
-
-      if (isPlaying) {
-        audioPlayer.pause();
-        isPlaying = false;
-      } else {
-        audioPlayer.play();
-        isPlaying = true;
-      }
-      updatePlayButton();
-    });
-
-    function updatePlayButton() {
-      if (isPlaying) {
-        playBtn.textContent = '⏸ Pausa';
-        eqBars.style.display = 'inline-flex';
-      } else {
-        playBtn.textContent = '▶ Reproducir';
-        eqBars.style.display = 'none';
-      }
-    }
-
-    // BOTÓN SORPRÉNDEME (RADIO ALEATORIA)
-    surpriseBtn.addEventListener('click', () => {
-      const randomIndex = Math.floor(Math.random() * stations.length);
-      tuneStation(stations[randomIndex]);
-    });
-
-    // SISTEMA DE FAVORITOS
-    function renderFavorites() {
-      favList.innerHTML = '';
-      favCount.textContent = `(${favorites.length})`;
-
-      favorites.forEach(id => {
-        const st = stations.find(s => s.id === id);
-        if (!st) return;
-
-        const item = document.createElement('div');
-        item.className = 'fav-item';
-        item.innerHTML = `
-          <span>📻 ${st.name}</span>
-          <span class="fav-remove" title="Quitar">✕</span>
-        `;
-
-        item.querySelector('span').addEventListener('click', () => tuneStation(st));
-        item.querySelector('.fav-remove').addEventListener('click', (e) => {
-          e.stopPropagation();
-          removeFavorite(st.id);
-        });
-
-        favList.appendChild(item);
-      });
-    }
-
-    function removeFavorite(id) {
-      favorites = favorites.filter(fId => fId !== id);
-      renderFavorites();
-      updateFavButtonState();
-    }
-
-    favToggleBtn.addEventListener('click', () => {
-      if (!currentStation) return;
-
-      if (favorites.includes(currentStation.id)) {
-        removeFavorite(currentStation.id);
-      } else {
-        favorites.push(currentStation.id);
-        renderFavorites();
-        updateFavButtonState();
-      }
-    });
-
-    function updateFavButtonState() {
-      if (currentStation && favorites.includes(currentStation.id)) {
-        favToggleBtn.classList.add('active');
-        favToggleBtn.textContent = '♥ Guardado';
-      } else {
-        favToggleBtn.classList.remove('active');
-        favToggleBtn.textContent = '♡ Guardar';
-      }
-    }
-
-    // BUSCADOR EN TIEMPO REAL
-    searchInput.addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase().trim();
-      if (!query) {
-        searchResults.style.display = 'none';
-        return;
-      }
-
-      const filtered = stations.filter(s => 
-        s.name.toLowerCase().includes(query) || 
-        s.country.toLowerCase().includes(query) ||
-        s.city.toLowerCase().includes(query)
-      );
-
-      searchResults.innerHTML = '';
-      if (filtered.length === 0) {
-        searchResults.style.display = 'none';
-        return;
-      }
-
-      filtered.forEach(s => {
-        const div = document.createElement('div');
-        div.className = 'results-item';
-        div.textContent = `${s.name} (${s.country})`;
-        div.addEventListener('click', () => {
-          tuneStation(s);
-          searchResults.style.display = 'none';
-          searchInput.value = '';
-        });
-        searchResults.appendChild(div);
-      });
-
-      searchResults.style.display = 'block';
-    });
-
-    // CERRAR BUSCADOR AL HACER CLIC AFUERA
-    document.addEventListener('click', (e) => {
-      if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-        searchResults.style.display = 'none';
-      }
-    });
-
-    // FILTRO POR GÉNERO
-    genreSelect.addEventListener('change', (e) => {
-      const selectedGenre = e.target.value;
-      if (selectedGenre === 'ALL') {
-        world.pointsData(stations);
-      } else {
-        const filtered = stations.filter(s => s.genre === selectedGenre);
-        world.pointsData(filtered);
-      }
-    });
-
-    // AJUSTE AUTOMÁTICO DE PANTALLA
-    window.addEventListener('resize', () => {
-      world.width(window.innerWidth).height(window.innerHeight);
-    });
-
-    // INICIALIZACIÓN AL CORTAR
-    renderFavorites();
-    // Iniciar con la primera radio por defecto (La Radio de Los Lentos)
-    tuneStation(stations[0]);
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
