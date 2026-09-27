@@ -1,6 +1,6 @@
 /* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Fix: Nombre de archivo static-noise.ogg + Puntos Ultra-Finos (0.015)
+   Versión Corregida: Audio Seguro (Sin bloqueo Autoplay) + Puntos Visibles
    ======================================================================== */
 
 (() => {
@@ -23,7 +23,7 @@
     SEARCH_LIMIT: 100,
     ANIMATION_SPEED_MS: 600,
     STATIC_DURATION_MS: 350,
-    STATIC_FILE_PATH: "static-noise.ogg", // Nombre corregido según GitHub
+    STATIC_FILE_PATH: "static-noise.ogg",
     STORAGE_KEY: "myRadioFavorites"
   };
 
@@ -60,7 +60,8 @@
     userOrigin: { ...CONFIG.BARILOCHE },
     favorites: [],
     flyTimer: null,
-    searchTimer: null
+    searchTimer: null,
+    userHasInteracted: false // Bandera para evitar violaciones de Autoplay
   };
 
   const Utils = {
@@ -113,7 +114,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO
+     3. MOTOR DE AUDIO PROTEGIDO
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -131,16 +132,19 @@
     },
 
     playStaticNoise() {
+      // Si el usuario aún no hizo clic en la pantalla, no intenta sonar para no romper el script
+      if (!state.userHasInteracted) return;
+
       try {
         this.staticPlayer.currentTime = 0;
-        this.staticPlayer.volume = 0.4;
+        this.staticPlayer.volume = 0.35;
         const playPromise = this.staticPlayer.play();
 
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
               setTimeout(() => {
-                this.staticPlayer.pause();
+                try { this.staticPlayer.pause(); } catch(e){}
               }, CONFIG.STATIC_DURATION_MS);
             })
             .catch(() => {
@@ -153,6 +157,7 @@
     },
 
     playSyntheticStatic(duration = 0.35) {
+      if (!state.userHasInteracted) return;
       try {
         this.initContext();
         if (!this.audioCtx) return;
@@ -163,14 +168,14 @@
         const output = buffer.getChannelData(0);
 
         for (let i = 0; i < bufferSize; i++) {
-          output[i] = (Math.random() * 2 - 1) * 0.12;
+          output[i] = (Math.random() * 2 - 1) * 0.1;
         }
 
         const whiteNoise = ctx.createBufferSource();
         whiteNoise.buffer = buffer;
 
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
         whiteNoise.connect(gain);
@@ -222,8 +227,12 @@
     }
   };
 
+  /* Registrar primera interacción del usuario para habilitar audio */
   ["click", "pointerdown", "keydown"].forEach(evt => {
-    window.addEventListener(evt, () => AudioEngine.initContext(), { once: true });
+    window.addEventListener(evt, () => {
+      state.userHasInteracted = true;
+      AudioEngine.initContext();
+    }, { once: true });
   });
 
   /* ======================================================================
@@ -278,17 +287,20 @@
   };
 
   /* ======================================================================
-     5. GESTOR DEL GLOBO (Puntos reducidos a 0.015 para máxima definición)
+     5. GESTOR DEL GLOBO TERRAQUEO (Puntos calibrados a 0.22)
      ====================================================================== */
   const GlobeManager = {
     instance: null,
 
     init(containerId) {
-      this.instance = Globe()(document.getElementById(containerId))
+      const elem = document.getElementById(containerId);
+      if (!elem) return;
+
+      this.instance = Globe()(elem)
         .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
-        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.015 : 0.003) // Tamaño micro-fino
+        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.1)")
+        .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.002)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.06) // Tamaño proporcional y legible
         .pointResolution(6)
         .polygonCapColor(() => "rgba(0,0,0,0)")
         .polygonSideColor(() => "rgba(0,0,0,0)")
@@ -317,17 +329,22 @@
     },
 
     updatePoints(stations) {
-      this.instance.pointsData(stations.filter(Utils.hasCoordinates));
+      if (this.instance) {
+        this.instance.pointsData(stations.filter(Utils.hasCoordinates));
+      }
     },
 
     refreshPointStyles() {
-      this.instance
-        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.05)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.001)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.015 : 0.003);
+      if (this.instance) {
+        this.instance
+          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.1)")
+          .pointAltitude(s => App.isMatchFilters(s) ? 0.01 : 0.002)
+          .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.06);
+      }
     },
 
     drawArc(origin, destination) {
+      if (!this.instance) return;
       if (Utils.hasCoordinates(destination)) {
         this.instance.arcsData([{
           startLat: origin.lat,
@@ -341,16 +358,18 @@
     },
 
     flyTo(lat, lng, altitude = 0.8, duration = CONFIG.ANIMATION_SPEED_MS) {
-      this.instance.pointOfView({ lat, lng, altitude }, duration);
+      if (this.instance) {
+        this.instance.pointOfView({ lat, lng, altitude }, duration);
+      }
     },
 
     getCenterCoordinates() {
-      return this.instance.pointOfView();
+      return this.instance ? this.instance.pointOfView() : { lat: 0, lng: 0 };
     }
   };
 
   /* ======================================================================
-     6. CONTROLADOR DE INTERFAZ Y APLICACIÓN
+     6. INTERFAZ DE USUARIO Y CONTROLADOR
      ====================================================================== */
   const UI = {
     updateCard(station, userOrigin) {
@@ -500,17 +519,21 @@
     },
 
     async loadInitialData() {
-      const popular = await RadioAPI.fetchPopular();
-      this.mergeStations([...CUSTOM_STATIONS.map(Utils.normalizeStation), ...popular]);
+      try {
+        const popular = await RadioAPI.fetchPopular();
+        this.mergeStations([...CUSTOM_STATIONS.map(Utils.normalizeStation), ...popular]);
 
-      const localStations = await RadioAPI.searchByName("bariloche");
-      this.mergeStations(localStations);
+        const localStations = await RadioAPI.searchByName("bariloche");
+        this.mergeStations(localStations);
 
-      const barilocheMatch = localStations.find(Utils.hasCoordinates);
-      if (barilocheMatch) {
-        this.flyAndTune(barilocheMatch);
-      } else {
-        this.tuneNearestToCenter();
+        const barilocheMatch = localStations.find(Utils.hasCoordinates);
+        if (barilocheMatch) {
+          this.flyAndTune(barilocheMatch, true);
+        } else {
+          this.tuneNearestToCenter();
+        }
+      } catch (e) {
+        UI.setStatus("⚠️ ERROR AL CARGAR ESTACIONES");
       }
 
       this.updateFavoritesUI();
@@ -544,6 +567,7 @@
     },
 
     isMatchFilters(station) {
+      if (!station) return false;
       let matchGenre = true;
       if (state.selectedGenre !== "all") {
         const tags = station.tags || "";
@@ -561,13 +585,16 @@
       return matchGenre && matchHD;
     },
 
-    flyAndTune(station) {
+    flyAndTune(station, isInitial = false) {
       if (!station) return;
 
       if (state.flyTimer) clearTimeout(state.flyTimer);
       AudioEngine.stopStream();
 
-      AudioEngine.playStaticNoise();
+      // Solo hace sonido si no es la carga inicial silenciosa
+      if (!isInitial) {
+        AudioEngine.playStaticNoise();
+      }
 
       const normalized = Utils.normalizeStation(station);
       if (!normalized) return;
