@@ -1,6 +1,6 @@
 //* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Puntos (0.12) + Reloj Dual Invertido HH:MM + Día/Noche
+   Versión Estable: Puntos (0.12) + Reloj Dual Invertido Estricto (HH:MM sin segundos)
    ======================================================================== */
 
 (() => {
@@ -181,7 +181,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO Y RELOJ DUAL (Formato HH:MM)
+     3. MOTOR DE AUDIO Y RELOJ DUAL (ESTRICTO HH:MM)
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -293,7 +293,30 @@
     }
   };
 
-  /* Módulo del Reloj Digital Dual (Hora Radio Arriba / Hora Local Abajo - Sin Segundos) */
+  /* Función auxiliar que GARANTIZA exactamente HH:MM eliminando los segundos */
+  function getFormattedHHMM(dateObj, timeZoneName = null) {
+    try {
+      const opts = { hour: '2-digit', minute: '2-digit', hour12: false };
+      if (timeZoneName) opts.timeZone = timeZoneName;
+
+      const formatter = new Intl.DateTimeFormat('es-AR', opts);
+      const parts = formatter.formatToParts(dateObj);
+
+      const hourPart = parts.find(p => p.type === 'hour');
+      const minutePart = parts.find(p => p.type === 'minute');
+
+      if (hourPart && minutePart) {
+        return `${hourPart.value.padStart(2, '0')}:${minutePart.value.padStart(2, '0')}`;
+      }
+    } catch (e) {}
+
+    // Fallback manual si ocurre algún error
+    const h = String(dateObj.getHours()).padStart(2, '0');
+    const m = String(dateObj.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  /* Módulo del Reloj Digital Dual (Radio Arriba / Local Abajo - Estricto HH:MM) */
   const ClockModule = {
     timer: null,
 
@@ -306,17 +329,12 @@
     updateClocks() {
       const now = new Date();
 
-      // 1. Hora Local (Sin segundos HH:MM)
-      const localTimeStr = now.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
-
+      // 1. Hora Local
+      const localTimeStr = getFormattedHHMM(now);
       const localEl = Utils.$("clockLocal");
       if (localEl) localEl.textContent = localTimeStr;
 
-      // 2. Hora de la Radio (Protagónica, Arriba - Sin segundos HH:MM)
+      // 2. Hora de la Radio (Protagónica, Arriba)
       const stationEl = Utils.$("clockStation");
       const labelEl = Utils.$("clockStationLabel");
 
@@ -332,20 +350,9 @@
       const timezone = COUNTRY_TIMEZONES[countryCode] || COUNTRY_TIMEZONES[countryName] || null;
 
       if (timezone) {
-        try {
-          const stationTimeStr = new Intl.DateTimeFormat('es-AR', {
-            timeZone: timezone,
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }).format(now);
-
-          if (stationEl) stationEl.textContent = stationTimeStr;
-          if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
-        } catch (e) {
-          if (stationEl) stationEl.textContent = localTimeStr;
-          if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
-        }
+        const stationTimeStr = getFormattedHHMM(now, timezone);
+        if (stationEl) stationEl.textContent = stationTimeStr;
+        if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
       } else {
         if (stationEl) stationEl.textContent = localTimeStr;
         if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
