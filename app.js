@@ -1,6 +1,6 @@
-/* ========================================================================
+//* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Puntos (0.12) + Reloj Dual Smartwatch IANA + Día/Noche
+   Versión Estable: Puntos (0.12) + Reloj Dual Invertido HH:MM + Día/Noche
    ======================================================================== */
 
 (() => {
@@ -181,7 +181,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO Y RELOJ DUAL
+     3. MOTOR DE AUDIO Y RELOJ DUAL (Formato HH:MM)
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -293,7 +293,7 @@
     }
   };
 
-  /* Módulo del Reloj Digital Dual Smartwatch */
+  /* Módulo del Reloj Digital Dual (Hora Radio Arriba / Hora Local Abajo - Sin Segundos) */
   const ClockModule = {
     timer: null,
 
@@ -306,24 +306,23 @@
     updateClocks() {
       const now = new Date();
 
-      // 1. Hora Local
+      // 1. Hora Local (Sin segundos HH:MM)
       const localTimeStr = now.toLocaleTimeString('es-AR', {
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
         hour12: false
       });
 
       const localEl = Utils.$("clockLocal");
       if (localEl) localEl.textContent = localTimeStr;
 
-      // 2. Hora de la Radio
+      // 2. Hora de la Radio (Protagónica, Arriba - Sin segundos HH:MM)
       const stationEl = Utils.$("clockStation");
       const labelEl = Utils.$("clockStationLabel");
 
       if (!state.currentStation) {
         if (stationEl) stationEl.textContent = localTimeStr;
-        if (labelEl) labelEl.textContent = "HORA LOCAL";
+        if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
         return;
       }
 
@@ -338,7 +337,6 @@
             timeZone: timezone,
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit',
             hour12: false
           }).format(now);
 
@@ -346,11 +344,11 @@
           if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
         } catch (e) {
           if (stationEl) stationEl.textContent = localTimeStr;
-          if (labelEl) labelEl.textContent = "HORA LOCAL";
+          if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
         }
       } else {
         if (stationEl) stationEl.textContent = localTimeStr;
-        if (labelEl) labelEl.textContent = "HORA LOCAL";
+        if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
       }
     }
   };
