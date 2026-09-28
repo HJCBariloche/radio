@@ -1,6 +1,6 @@
 /* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Puntos Calibrados (0.12) + Autoplay Seguro + Día/Noche
+   Versión Estable: Puntos (0.12) + Reloj Dual Smartwatch IANA + Día/Noche
    ======================================================================== */
 
 (() => {
@@ -19,7 +19,7 @@
       lng: -71.3103,
       label: "Bariloche"
     },
-    INITIAL_LIMIT: 4000,
+    INITIAL_LIMIT: 6000,
     SEARCH_LIMIT: 100,
     ANIMATION_SPEED_MS: 600,
     STATIC_DURATION_MS: 350,
@@ -39,11 +39,65 @@
     }
   };
 
+  /* Diccionario de Zonas Horarias IANA por País y Código ISO */
+  const COUNTRY_TIMEZONES = {
+    "AR": "America/Argentina/Buenos_Aires", "ARGENTINA": "America/Argentina/Buenos_Aires",
+    "BR": "America/Sao_Paulo", "BRAZIL": "America/Sao_Paulo", "BRASIL": "America/Sao_Paulo",
+    "CL": "America/Santiago", "CHILE": "America/Santiago",
+    "UY": "America/Montevideo", "URUGUAY": "America/Montevideo",
+    "CO": "America/Bogota", "COLOMBIA": "America/Bogota",
+    "MX": "America/Mexico_City", "MEXICO": "America/Mexico_City", "MÉXICO": "America/Mexico_City",
+    "PE": "America/Lima", "PERU": "America/Lima", "PERÚ": "America/Lima",
+    "VE": "America/Caracas", "VENEZUELA": "America/Caracas",
+    "EC": "America/Guayaquil", "ECUADOR": "America/Guayaquil",
+    "BO": "America/La_Paz", "BOLIVIA": "America/La_Paz",
+    "PY": "America/Asuncion", "PARAGUAY": "America/Asuncion",
+    "US": "America/New_York", "UNITED STATES": "America/New_York", "ESTADOS UNIDOS": "America/New_York", "USA": "America/New_York",
+    "CA": "America/Toronto", "CANADA": "America/Toronto", "CANADÁ": "America/Toronto",
+    "ES": "Europe/Madrid", "SPAIN": "Europe/Madrid", "ESPAÑA": "Europe/Madrid",
+    "DE": "Europe/Berlin", "GERMANY": "Europe/Berlin", "ALEMANIA": "Europe/Berlin",
+    "FR": "Europe/Paris", "FRANCE": "Europe/Paris", "FRANCIA": "Europe/Paris",
+    "IT": "Europe/Rome", "ITALY": "Europe/Rome", "ITALIA": "Europe/Rome",
+    "GB": "Europe/London", "UNITED KINGDOM": "Europe/London", "REINO UNIDO": "Europe/London", "UK": "Europe/London",
+    "PT": "Europe/Lisbon", "PORTUGAL": "Europe/Lisbon",
+    "NL": "Europe/Amsterdam", "NETHERLANDS": "Europe/Amsterdam", "HOLANDA": "Europe/Amsterdam",
+    "RU": "Europe/Moscow", "RUSSIA": "Europe/Moscow", "RUSIA": "Europe/Moscow",
+    "JP": "Asia/Tokyo", "JAPAN": "Asia/Tokyo", "JAPÓN": "Asia/Tokyo", "JAPON": "Asia/Tokyo",
+    "CN": "Asia/Shanghai", "CHINA": "Asia/Shanghai",
+    "AU": "Australia/Sydney", "AUSTRALIA": "Australia/Sydney",
+    "NZ": "Pacific/Auckland", "NEW ZEALAND": "Pacific/Auckland", "NUEVA ZELANDA": "Pacific/Auckland",
+    "ZA": "Africa/Johannesburg", "SOUTH AFRICA": "Africa/Johannesburg", "SUDÁFRICA": "Africa/Johannesburg",
+    "CU": "America/Havana", "CUBA": "America/Havana",
+    "DO": "America/Santo_Domingo", "DOMINICAN REPUBLIC": "America/Santo_Domingo", "REPÚBLICA DOMINICANA": "America/Santo_Domingo",
+    "PR": "America/Puerto_Rico", "PUERTO RICO": "America/Puerto_Rico",
+    "CR": "America/Costa_Rica", "COSTA RICA": "America/Costa_Rica",
+    "PA": "America/Panama", "PANAMA": "America/Panama", "PANAMÁ": "America/Panama",
+    "GT": "America/Guatemala", "GUATEMALA": "America/Guatemala",
+    "HN": "America/Tegucigalpa", "HONDURAS": "America/Tegucigalpa",
+    "SV": "America/El_Salvador", "EL SALVADOR": "America/El_Salvador",
+    "NI": "America/Managua", "NICARAGUA": "America/Managua",
+    "IE": "Europe/Dublin", "IRELAND": "Europe/Dublin", "IRLANDA": "Europe/Dublin",
+    "CH": "Europe/Zurich", "SWITZERLAND": "Europe/Zurich", "SUIZA": "Europe/Zurich",
+    "AT": "Europe/Vienna", "AUSTRIA": "Europe/Vienna",
+    "BE": "Europe/Brussels", "BELGIUM": "Europe/Brussels", "BÉLGICA": "Europe/Brussels",
+    "SE": "Europe/Stockholm", "SWEDEN": "Europe/Stockholm", "SUECIA": "Europe/Stockholm",
+    "NO": "Europe/Oslo", "NORWAY": "Europe/Oslo", "NORUEGA": "Europe/Oslo",
+    "FI": "Europe/Helsinki", "FINLAND": "Europe/Helsinki", "FINLANDIA": "Europe/Helsinki",
+    "PL": "Europe/Warsaw", "POLAND": "Europe/Warsaw", "POLONIA": "Europe/Warsaw",
+    "GR": "Europe/Athens", "GREECE": "Europe/Athens", "GRECIA": "Europe/Athens",
+    "TR": "Europe/Istanbul", "TURKEY": "Europe/Istanbul", "TURQUÍA": "Europe/Istanbul",
+    "IN": "Asia/Kolkata", "INDIA": "Asia/Kolkata",
+    "KR": "Asia/Seoul", "SOUTH KOREA": "Asia/Seoul", "COREA DEL SUR": "Asia/Seoul",
+    "IL": "Asia/Jerusalem", "ISRAEL": "Asia/Jerusalem",
+    "EG": "Africa/Cairo", "EGYPT": "Africa/Cairo", "EGIPTO": "Africa/Cairo"
+  };
+
   const CUSTOM_STATIONS = [
     {
       stationuuid: "custom-radio-lentos",
       name: "La Radio de los Lentos",
       country: "Argentina",
+      countrycode: "AR",
       state: "Buenos Aires",
       tags: "lentos baladas romantic love 80s 90s pop",
       bitrate: 320,
@@ -107,6 +161,7 @@
         stationuuid: Utils.cleanText(raw.stationuuid ?? raw.uuid),
         name: Utils.cleanText(raw.name) || "Radio sin nombre",
         country: Utils.cleanText(raw.country),
+        countrycode: Utils.cleanText(raw.countrycode || raw.country_code).toUpperCase(),
         state: Utils.cleanText(raw.state),
         tags: Utils.cleanText(raw.tags).toLowerCase(),
         bitrate: Number(raw.bitrate) || 0,
@@ -126,7 +181,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO PROTEGIDO
+     3. MOTOR DE AUDIO Y RELOJ DUAL
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -238,12 +293,75 @@
     }
   };
 
-  /* Registrar interacción inicial */
-  ["click", "pointerdown", "keydown"].forEach(evt => {
-    window.addEventListener(evt, () => {
-      state.userHasInteracted = true;
-      AudioEngine.initContext();
-    }, { once: true });
+  /* Módulo del Reloj Digital Dual Smartwatch */
+  const ClockModule = {
+    timer: null,
+
+    start() {
+      this.updateClocks();
+      if (this.timer) clearInterval(this.timer);
+      this.timer = setInterval(() => this.updateClocks(), 1000);
+    },
+
+    updateClocks() {
+      const now = new Date();
+
+      // 1. Hora Local
+      const localTimeStr = now.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      const localEl = Utils.$("clockLocal");
+      if (localEl) localEl.textContent = localTimeStr;
+
+      // 2. Hora de la Radio
+      const stationEl = Utils.$("clockStation");
+      const labelEl = Utils.$("clockStationLabel");
+
+      if (!state.currentStation) {
+        if (stationEl) stationEl.textContent = localTimeStr;
+        if (labelEl) labelEl.textContent = "HORA LOCAL";
+        return;
+      }
+
+      const countryName = (state.currentStation.country || "").toUpperCase().trim();
+      const countryCode = (state.currentStation.countrycode || "").toUpperCase().trim();
+
+      const timezone = COUNTRY_TIMEZONES[countryCode] || COUNTRY_TIMEZONES[countryName] || null;
+
+      if (timezone) {
+        try {
+          const stationTimeStr = new Intl.DateTimeFormat('es-AR', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).format(now);
+
+          if (stationEl) stationEl.textContent = stationTimeStr;
+          if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
+        } catch (e) {
+          if (stationEl) stationEl.textContent = localTimeStr;
+          if (labelEl) labelEl.textContent = "HORA LOCAL";
+        }
+      } else {
+        if (stationEl) stationEl.textContent = localTimeStr;
+        if (labelEl) labelEl.textContent = "HORA LOCAL";
+      }
+    }
+  };
+
+  const markUserInteraction = () => {
+    state.userHasInteracted = true;
+    AudioEngine.initContext();
+  };
+
+  ["click", "pointerdown", "keydown", "touchstart"].forEach(evt => {
+    window.addEventListener(evt, markUserInteraction, { once: true });
   });
 
   /* ======================================================================
@@ -274,7 +392,7 @@
       for (const server of CONFIG.SERVERS) {
         try {
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 12000);
+          const timer = setTimeout(() => controller.abort(), 10000);
           const res = await fetch(server + path, { signal: controller.signal });
           clearTimeout(timer);
           if (res.ok) return await res.json();
@@ -298,7 +416,7 @@
   };
 
   /* ======================================================================
-     5. GESTOR DEL GLOBO TERRAQUEO (Puntos calibrados a 0.12)
+     5. GESTOR DEL GLOBO TERRAQUEO
      ====================================================================== */
   const GlobeManager = {
     instance: null,
@@ -312,9 +430,9 @@
 
       this.instance = Globe()(elem)
         .globeImageUrl(initialTexture)
-        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.15)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.002)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.12 : 0.03)
+        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
+        .pointAltitude(s => App.isMatchFilters(s) ? 0.012 : 0.002)
+        .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.04)
         .pointResolution(6)
         .polygonCapColor(() => "rgba(0,0,0,0)")
         .polygonSideColor(() => "rgba(0,0,0,0)")
@@ -325,7 +443,14 @@
         .arcDashGap(0.2)
         .arcDashAnimateTime(1200)
         .arcStroke(0.3)
-        .onPointClick(station => App.flyAndTune(station));
+        .onPointClick(station => {
+          markUserInteraction();
+          if (station) App.flyAndTune(station);
+        })
+        .onGlobeClick(({ lat, lng }) => {
+          markUserInteraction();
+          App.tuneNearestToLocation(lat, lng);
+        });
 
       this.instance.pointOfView({ lat: CONFIG.BARILOCHE.lat, lng: CONFIG.BARILOCHE.lng, altitude: 0.9 }, 0);
       this.loadCountryBorders();
@@ -367,9 +492,9 @@
     refreshPointStyles() {
       if (this.instance) {
         this.instance
-          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.15)")
-          .pointAltitude(s => App.isMatchFilters(s) ? 0.008 : 0.002)
-          .pointRadius(s => App.isMatchFilters(s) ? 0.12 : 0.03);
+          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
+          .pointAltitude(s => App.isMatchFilters(s) ? 0.012 : 0.002)
+          .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.04);
       }
     },
 
@@ -398,9 +523,6 @@
     }
   };
 
-  /* ======================================================================
-     6. INTERFAZ Y APLICACIÓN
-     ====================================================================== */
   const UI = {
     updateCard(station, userOrigin) {
       if (!station) return;
@@ -526,6 +648,7 @@
     init() {
       state.favorites = StorageManager.loadFavorites();
       GlobeManager.init("globe");
+      ClockModule.start();
       this.bindEvents();
       this.loadInitialData();
       this.detectGeolocation();
@@ -632,6 +755,7 @@
       state.currentStation = normalized;
       UI.updateCard(normalized, state.userOrigin);
       UI.setStatus("● BUSCANDO SEÑAL...");
+      ClockModule.updateClocks();
 
       if (!Utils.hasCoordinates(normalized)) {
         this.tuneStation(normalized);
@@ -643,6 +767,29 @@
       state.flyTimer = setTimeout(() => {
         this.tuneStation(normalized);
       }, CONFIG.ANIMATION_SPEED_MS + 50);
+    },
+
+    tuneNearestToLocation(lat, lng) {
+      let pool = state.stations.filter(s => Utils.hasCoordinates(s) && this.isMatchFilters(s));
+      if (!pool.length) {
+        pool = state.stations.filter(Utils.hasCoordinates);
+      }
+      if (!pool.length) return;
+
+      let nearest = null;
+      let minDistance = Infinity;
+
+      for (const s of pool) {
+        const d = Utils.getKilometers(lat, lng, s.lat, s.lng);
+        if (d < minDistance) {
+          minDistance = d;
+          nearest = s;
+        }
+      }
+
+      if (nearest) {
+        this.flyAndTune(nearest);
+      }
     },
 
     tuneStation(station) {
@@ -735,22 +882,8 @@
     },
 
     tuneNearestToCenter() {
-      const active = state.stations.filter(s => Utils.hasCoordinates(s) && this.isMatchFilters(s));
-      if (!active.length) return;
-
       const pov = GlobeManager.getCenterCoordinates();
-      let nearest = null;
-      let minDistance = Infinity;
-
-      for (const s of active) {
-        const d = Utils.getKilometers(pov.lat, pov.lng, s.lat, s.lng);
-        if (d < minDistance) {
-          minDistance = d;
-          nearest = s;
-        }
-      }
-
-      if (nearest) this.tuneStation(nearest);
+      this.tuneNearestToLocation(pov.lat, pov.lng);
     },
 
     locateOrigin() {
