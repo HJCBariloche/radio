@@ -360,7 +360,7 @@
       100% { height: 14px; }
     }
 
-    /* RELOJ DUAL SMARTWATCH (DERECHA INFERIOR - ARRIBA DEL CARTEL) */
+    /* RELOJ DUAL SMARTWATCH (DERECHA INFERIOR - ARRIBA DEL CARTEL DORADO) */
     .clock-box {
       position: absolute;
       bottom: 105px;
@@ -369,7 +369,7 @@
       background: rgba(10, 14, 24, 0.94);
       backdrop-filter: blur(12px);
       border: 1.5px solid rgba(255, 170, 0, 0.6);
-      border-radius: 22px;
+      border-radius: 20px;
       padding: 12px 20px;
       text-align: center;
       min-width: 260px;
@@ -384,28 +384,28 @@
     }
     .clock-label {
       font-family: 'Inter', sans-serif;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       letter-spacing: 1.2px;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
-    .clock-label-local { color: #8a99ad; }
-    .clock-label-station { color: #ffaa00; margin-top: 6px; }
+    .clock-label-station { color: #ffaa00; }
+    .clock-label-local { color: #8a99ad; margin-top: 8px; }
 
-    .clock-time-local {
+    .clock-time-station {
       font-size: 22px;
       font-weight: 700;
       color: #ffffff;
       text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
-      letter-spacing: 1.5px;
+      letter-spacing: 2px;
       line-height: 1.1;
     }
-    .clock-time-station {
-      font-size: 15px;
+    .clock-time-local {
+      font-size: 20px;
       font-weight: 600;
       color: #cbd5e1;
-      letter-spacing: 1.2px;
+      letter-spacing: 2px;
       line-height: 1.1;
     }
 
@@ -513,15 +513,15 @@
     </div>
   </div>
 
-  <!-- RELOJ DUAL SMARTWATCH (UBICADO ARRIBA DEL CARTEL DORADO) -->
+  <!-- RELOJ DUAL SMARTWATCH (INVERTIDO: RADIO ARRIBA / LOCAL ABAJO) -->
   <div class="clock-box" id="clockBox">
     <div class="clock-row">
-      <div class="clock-label clock-label-local">HORA LOCAL</div>
-      <div id="clockLocal" class="clock-time-local">--:--:--</div>
+      <div id="clockStationLabel" class="clock-label clock-label-station">HORA DE LA RADIO</div>
+      <div id="clockStation" class="clock-time-station">--:--</div>
     </div>
     <div class="clock-row">
-      <div id="clockStationLabel" class="clock-label clock-label-station">HORA DE LA RADIO</div>
-      <div id="clockStation" class="clock-time-station">--:--:--</div>
+      <div class="clock-label clock-label-local">HORA LOCAL</div>
+      <div id="clockLocal" class="clock-time-local">--:--</div>
     </div>
   </div>
 
