@@ -1,6 +1,6 @@
 /* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Protegida: Inicialización Segura + Reloj Dual HH:MM + Día/Noche
+   Versión Estable: Responsive Design + Puntos (0.12) + Reloj Dual HH:MM
    ======================================================================== */
 
 (() => {
@@ -39,7 +39,6 @@
     }
   };
 
-  /* Diccionario de Zonas Horarias IANA por País y Código ISO */
   const COUNTRY_TIMEZONES = {
     "AR": "America/Argentina/Buenos_Aires", "ARGENTINA": "America/Argentina/Buenos_Aires",
     "BR": "America/Sao_Paulo", "BRAZIL": "America/Sao_Paulo", "BRASIL": "America/Sao_Paulo",
@@ -181,7 +180,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO Y RELOJ DUAL (FORMATO STRICT HH:MM SIN SEGUNDOS)
+     3. MOTOR DE AUDIO Y RELOJ DUAL
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -293,7 +292,6 @@
     }
   };
 
-  /* Formateador universal que GARANTIZA exactamente HH:MM sin segundos */
   function getFormattedHHMM(dateObj, timeZoneName = null) {
     try {
       const opts = {
@@ -312,7 +310,6 @@
     }
   }
 
-  /* Módulo del Reloj Digital Dual */
   const ClockModule = {
     timer: null,
 
@@ -326,12 +323,10 @@
       try {
         const now = new Date();
 
-        // 1. Hora Local (Sin segundos HH:MM)
         const localTimeStr = getFormattedHHMM(now);
         const localEl = Utils.$("clockLocal");
         if (localEl) localEl.textContent = localTimeStr;
 
-        // 2. Hora de la Radio (Protagónica, Arriba)
         const stationEl = Utils.$("clockStation");
         const labelEl = Utils.$("clockStationLabel");
 
@@ -668,13 +663,28 @@
       window.toggleFavorite = () => this.toggleFavorite();
       window.locateOrigin = () => this.locateOrigin();
       window.handleSearchKey = (e) => this.handleSearchKey(e);
+      window.toggleFavPanelMobile = () => this.toggleFavPanelMobile();
 
       document.addEventListener("click", (e) => {
         const container = document.querySelector(".search-container");
+        const favPanel = document.querySelector(".fav-panel");
+        const favToggleBtn = document.getElementById("favToggleBtn");
+
         if (container && !container.contains(e.target)) {
           UI.clearSearchResults();
         }
+
+        if (favPanel && favToggleBtn && !favPanel.contains(e.target) && !favToggleBtn.contains(e.target)) {
+          favPanel.classList.remove("show");
+        }
       });
+    },
+
+    toggleFavPanelMobile() {
+      const favPanel = document.querySelector(".fav-panel");
+      if (favPanel) {
+        favPanel.classList.toggle("show");
+      }
     },
 
     async loadInitialData() {
