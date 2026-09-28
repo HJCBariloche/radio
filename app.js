@@ -1,6 +1,6 @@
-//* ========================================================================
+/* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Puntos (0.12) + Reloj Dual Invertido Estricto (HH:MM sin segundos)
+   Versión Protegida: Inicialización Segura + Reloj Dual HH:MM + Día/Noche
    ======================================================================== */
 
 (() => {
@@ -181,7 +181,7 @@
   };
 
   /* ======================================================================
-     3. MOTOR DE AUDIO Y RELOJ DUAL (ESTRICTO HH:MM)
+     3. MOTOR DE AUDIO Y RELOJ DUAL (FORMATO STRICT HH:MM SIN SEGUNDOS)
      ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
@@ -293,30 +293,26 @@
     }
   };
 
-  /* Función auxiliar que GARANTIZA exactamente HH:MM eliminando los segundos */
+  /* Formateador universal que GARANTIZA exactamente HH:MM sin segundos */
   function getFormattedHHMM(dateObj, timeZoneName = null) {
     try {
-      const opts = { hour: '2-digit', minute: '2-digit', hour12: false };
-      if (timeZoneName) opts.timeZone = timeZoneName;
-
-      const formatter = new Intl.DateTimeFormat('es-AR', opts);
-      const parts = formatter.formatToParts(dateObj);
-
-      const hourPart = parts.find(p => p.type === 'hour');
-      const minutePart = parts.find(p => p.type === 'minute');
-
-      if (hourPart && minutePart) {
-        return `${hourPart.value.padStart(2, '0')}:${minutePart.value.padStart(2, '0')}`;
+      const opts = {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      };
+      if (timeZoneName) {
+        opts.timeZone = timeZoneName;
       }
-    } catch (e) {}
-
-    // Fallback manual si ocurre algún error
-    const h = String(dateObj.getHours()).padStart(2, '0');
-    const m = String(dateObj.getMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
+      return new Intl.DateTimeFormat('en-GB', opts).format(dateObj);
+    } catch (e) {
+      const h = String(dateObj.getHours()).padStart(2, '0');
+      const m = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    }
   }
 
-  /* Módulo del Reloj Digital Dual (Radio Arriba / Local Abajo - Estricto HH:MM) */
+  /* Módulo del Reloj Digital Dual */
   const ClockModule = {
     timer: null,
 
@@ -327,36 +323,38 @@
     },
 
     updateClocks() {
-      const now = new Date();
+      try {
+        const now = new Date();
 
-      // 1. Hora Local
-      const localTimeStr = getFormattedHHMM(now);
-      const localEl = Utils.$("clockLocal");
-      if (localEl) localEl.textContent = localTimeStr;
+        // 1. Hora Local (Sin segundos HH:MM)
+        const localTimeStr = getFormattedHHMM(now);
+        const localEl = Utils.$("clockLocal");
+        if (localEl) localEl.textContent = localTimeStr;
 
-      // 2. Hora de la Radio (Protagónica, Arriba)
-      const stationEl = Utils.$("clockStation");
-      const labelEl = Utils.$("clockStationLabel");
+        // 2. Hora de la Radio (Protagónica, Arriba)
+        const stationEl = Utils.$("clockStation");
+        const labelEl = Utils.$("clockStationLabel");
 
-      if (!state.currentStation) {
-        if (stationEl) stationEl.textContent = localTimeStr;
-        if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
-        return;
-      }
+        if (!state.currentStation) {
+          if (stationEl) stationEl.textContent = localTimeStr;
+          if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
+          return;
+        }
 
-      const countryName = (state.currentStation.country || "").toUpperCase().trim();
-      const countryCode = (state.currentStation.countrycode || "").toUpperCase().trim();
+        const countryName = (state.currentStation.country || "").toUpperCase().trim();
+        const countryCode = (state.currentStation.countrycode || "").toUpperCase().trim();
 
-      const timezone = COUNTRY_TIMEZONES[countryCode] || COUNTRY_TIMEZONES[countryName] || null;
+        const timezone = COUNTRY_TIMEZONES[countryCode] || COUNTRY_TIMEZONES[countryName] || null;
 
-      if (timezone) {
-        const stationTimeStr = getFormattedHHMM(now, timezone);
-        if (stationEl) stationEl.textContent = stationTimeStr;
-        if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
-      } else {
-        if (stationEl) stationEl.textContent = localTimeStr;
-        if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
-      }
+        if (timezone) {
+          const stationTimeStr = getFormattedHHMM(now, timezone);
+          if (stationEl) stationEl.textContent = stationTimeStr;
+          if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
+        } else {
+          if (stationEl) stationEl.textContent = localTimeStr;
+          if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
+        }
+      } catch (err) {}
     }
   };
 
@@ -433,33 +431,35 @@
       const savedTheme = localStorage.getItem(CONFIG.THEME_KEY) || "night";
       const initialTexture = GLOBE_THEMES[savedTheme].url;
 
-      this.instance = Globe()(elem)
-        .globeImageUrl(initialTexture)
-        .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-        .pointAltitude(s => App.isMatchFilters(s) ? 0.012 : 0.002)
-        .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.04)
-        .pointResolution(6)
-        .polygonCapColor(() => "rgba(0,0,0,0)")
-        .polygonSideColor(() => "rgba(0,0,0,0)")
-        .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
-        .arcColor(() => ["#ffaa00", "rgba(255,170,0,0.1)"])
-        .arcAltitude(0.2)
-        .arcDashLength(0.4)
-        .arcDashGap(0.2)
-        .arcDashAnimateTime(1200)
-        .arcStroke(0.3)
-        .onPointClick(station => {
-          markUserInteraction();
-          if (station) App.flyAndTune(station);
-        })
-        .onGlobeClick(({ lat, lng }) => {
-          markUserInteraction();
-          App.tuneNearestToLocation(lat, lng);
-        });
+      if (typeof Globe === "function") {
+        this.instance = Globe()(elem)
+          .globeImageUrl(initialTexture)
+          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
+          .pointAltitude(s => App.isMatchFilters(s) ? 0.012 : 0.002)
+          .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.04)
+          .pointResolution(6)
+          .polygonCapColor(() => "rgba(0,0,0,0)")
+          .polygonSideColor(() => "rgba(0,0,0,0)")
+          .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
+          .arcColor(() => ["#ffaa00", "rgba(255,170,0,0.1)"])
+          .arcAltitude(0.2)
+          .arcDashLength(0.4)
+          .arcDashGap(0.2)
+          .arcDashAnimateTime(1200)
+          .arcStroke(0.3)
+          .onPointClick(station => {
+            markUserInteraction();
+            if (station) App.flyAndTune(station);
+          })
+          .onGlobeClick(({ lat, lng }) => {
+            markUserInteraction();
+            App.tuneNearestToLocation(lat, lng);
+          });
 
-      this.instance.pointOfView({ lat: CONFIG.BARILOCHE.lat, lng: CONFIG.BARILOCHE.lng, altitude: 0.9 }, 0);
-      this.loadCountryBorders();
-      this.updateThemeButton(savedTheme);
+        this.instance.pointOfView({ lat: CONFIG.BARILOCHE.lat, lng: CONFIG.BARILOCHE.lng, altitude: 0.9 }, 0);
+        this.loadCountryBorders();
+        this.updateThemeButton(savedTheme);
+      }
     },
 
     setTheme(theme) {
@@ -481,7 +481,7 @@
       fetch("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
         .then(res => res.json())
         .then(data => {
-          if (data && Array.isArray(data.features)) {
+          if (data && Array.isArray(data.features) && this.instance) {
             this.instance.polygonsData(data.features);
           }
         })
@@ -651,12 +651,12 @@
 
   const App = {
     init() {
-      state.favorites = StorageManager.loadFavorites();
-      GlobeManager.init("globe");
-      ClockModule.start();
-      this.bindEvents();
-      this.loadInitialData();
-      this.detectGeolocation();
+      try { state.favorites = StorageManager.loadFavorites(); } catch(e){}
+      try { ClockModule.start(); } catch(e){}
+      try { GlobeManager.init("globe"); } catch(e){}
+      try { this.bindEvents(); } catch(e){}
+      try { this.loadInitialData(); } catch(e){}
+      try { this.detectGeolocation(); } catch(e){}
     },
 
     bindEvents() {
