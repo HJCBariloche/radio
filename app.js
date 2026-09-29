@@ -1,942 +1,674 @@
-/* ========================================================================
-   RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Responsive Design + Puntos (0.12) + Reloj Dual HH:MM
-   ======================================================================== */
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RADIO S.C.BARILOCHE - Global Radio Explorer</title>
+  
+  <!-- Fuentes Google: Inter (Interfaz) y Orbitron (Reloj Digital Tech) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/globe.gl"></script>
 
-(() => {
-  "use strict";
-
-  /* ======================================================================
-     1. CONFIGURACIÓN Y CONSTANTES GLOBAL
-     ====================================================================== */
-  const CONFIG = {
-    SERVERS: [
-      "https://de1.api.radio-browser.info",
-      "https://all.api.radio-browser.info"
-    ],
-    BARILOCHE: {
-      lat: -41.1335,
-      lng: -71.3103,
-      label: "Bariloche"
-    },
-    INITIAL_LIMIT: 6000,
-    SEARCH_LIMIT: 100,
-    ANIMATION_SPEED_MS: 600,
-    STATIC_DURATION_MS: 350,
-    STATIC_FILE_PATH: "static-noise.ogg",
-    STORAGE_KEY: "myRadioFavorites",
-    THEME_KEY: "globeTheme"
-  };
-
-  const GLOBE_THEMES = {
-    day: {
-      url: "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
-      icon: "🌙"
-    },
-    night: {
-      url: "https://unpkg.com/three-globe/example/img/earth-night.jpg",
-      icon: "☀️"
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
-  };
 
-  const COUNTRY_TIMEZONES = {
-    "AR": "America/Argentina/Buenos_Aires", "ARGENTINA": "America/Argentina/Buenos_Aires",
-    "BR": "America/Sao_Paulo", "BRAZIL": "America/Sao_Paulo", "BRASIL": "America/Sao_Paulo",
-    "CL": "America/Santiago", "CHILE": "America/Santiago",
-    "UY": "America/Montevideo", "URUGUAY": "America/Montevideo",
-    "CO": "America/Bogota", "COLOMBIA": "America/Bogota",
-    "MX": "America/Mexico_City", "MEXICO": "America/Mexico_City", "MÉXICO": "America/Mexico_City",
-    "PE": "America/Lima", "PERU": "America/Lima", "PERÚ": "America/Lima",
-    "VE": "America/Caracas", "VENEZUELA": "America/Caracas",
-    "EC": "America/Guayaquil", "ECUADOR": "America/Guayaquil",
-    "BO": "America/La_Paz", "BOLIVIA": "America/La_Paz",
-    "PY": "America/Asuncion", "PARAGUAY": "America/Asuncion",
-    "US": "America/New_York", "UNITED STATES": "America/New_York", "ESTADOS UNIDOS": "America/New_York", "USA": "America/New_York",
-    "CA": "America/Toronto", "CANADA": "America/Toronto", "CANADÁ": "America/Toronto",
-    "ES": "Europe/Madrid", "SPAIN": "Europe/Madrid", "ESPAÑA": "Europe/Madrid",
-    "DE": "Europe/Berlin", "GERMANY": "Europe/Berlin", "ALEMANIA": "Europe/Berlin",
-    "FR": "Europe/Paris", "FRANCE": "Europe/Paris", "FRANCIA": "Europe/Paris",
-    "IT": "Europe/Rome", "ITALY": "Europe/Rome", "ITALIA": "Europe/Rome",
-    "GB": "Europe/London", "UNITED KINGDOM": "Europe/London", "REINO UNIDO": "Europe/London", "UK": "Europe/London",
-    "PT": "Europe/Lisbon", "PORTUGAL": "Europe/Lisbon",
-    "NL": "Europe/Amsterdam", "NETHERLANDS": "Europe/Amsterdam", "HOLANDA": "Europe/Amsterdam",
-    "RU": "Europe/Moscow", "RUSSIA": "Europe/Moscow", "RUSIA": "Europe/Moscow",
-    "JP": "Asia/Tokyo", "JAPAN": "Asia/Tokyo", "JAPÓN": "Asia/Tokyo", "JAPON": "Asia/Tokyo",
-    "CN": "Asia/Shanghai", "CHINA": "Asia/Shanghai",
-    "AU": "Australia/Sydney", "AUSTRALIA": "Australia/Sydney",
-    "NZ": "Pacific/Auckland", "NEW ZEALAND": "Pacific/Auckland", "NUEVA ZELANDA": "Pacific/Auckland",
-    "ZA": "Africa/Johannesburg", "SOUTH AFRICA": "Africa/Johannesburg", "SUDÁFRICA": "Africa/Johannesburg",
-    "CU": "America/Havana", "CUBA": "America/Havana",
-    "DO": "America/Santo_Domingo", "DOMINICAN REPUBLIC": "America/Santo_Domingo", "REPÚBLICA DOMINICANA": "America/Santo_Domingo",
-    "PR": "America/Puerto_Rico", "PUERTO RICO": "America/Puerto_Rico",
-    "CR": "America/Costa_Rica", "COSTA RICA": "America/Costa_Rica",
-    "PA": "America/Panama", "PANAMA": "America/Panama", "PANAMÁ": "America/Panama",
-    "GT": "America/Guatemala", "GUATEMALA": "America/Guatemala",
-    "HN": "America/Tegucigalpa", "HONDURAS": "America/Tegucigalpa",
-    "SV": "America/El_Salvador", "EL SALVADOR": "America/El_Salvador",
-    "NI": "America/Managua", "NICARAGUA": "America/Managua",
-    "IE": "Europe/Dublin", "IRELAND": "Europe/Dublin", "IRLANDA": "Europe/Dublin",
-    "CH": "Europe/Zurich", "SWITZERLAND": "Europe/Zurich", "SUIZA": "Europe/Zurich",
-    "AT": "Europe/Vienna", "AUSTRIA": "Europe/Vienna",
-    "BE": "Europe/Brussels", "BELGIUM": "Europe/Brussels", "BÉLGICA": "Europe/Brussels",
-    "SE": "Europe/Stockholm", "SWEDEN": "Europe/Stockholm", "SUECIA": "Europe/Stockholm",
-    "NO": "Europe/Oslo", "NORWAY": "Europe/Oslo", "NORUEGA": "Europe/Oslo",
-    "FI": "Europe/Helsinki", "FINLAND": "Europe/Helsinki", "FINLANDIA": "Europe/Helsinki",
-    "PL": "Europe/Warsaw", "POLAND": "Europe/Warsaw", "POLONIA": "Europe/Warsaw",
-    "GR": "Europe/Athens", "GREECE": "Europe/Athens", "GRECIA": "Europe/Athens",
-    "TR": "Europe/Istanbul", "TURKEY": "Europe/Istanbul", "TURQUÍA": "Europe/Istanbul",
-    "IN": "Asia/Kolkata", "INDIA": "Asia/Kolkata",
-    "KR": "Asia/Seoul", "SOUTH KOREA": "Asia/Seoul", "COREA DEL SUR": "Asia/Seoul",
-    "IL": "Asia/Jerusalem", "ISRAEL": "Asia/Jerusalem",
-    "EG": "Africa/Cairo", "EGYPT": "Africa/Cairo", "EGIPTO": "Africa/Cairo"
-  };
-
-  const CUSTOM_STATIONS = [
-    {
-      stationuuid: "custom-radio-lentos",
-      name: "La Radio de los Lentos",
-      country: "Argentina",
-      countrycode: "AR",
-      state: "Buenos Aires",
-      tags: "lentos baladas romantic love 80s 90s pop",
-      bitrate: 320,
-      codec: "MP3",
-      lat: -34.6037,
-      lng: -58.3816,
-      url: "https://stream.zeno.fm/f3wvbb7534zuv",
-      urlResolved: "https://stream.zeno.fm/f3wvbb7534zuv",
-      sources: [
-        "https://stream.zeno.fm/f3wvbb7534zuv",
-        "https://stream.zeno.fm/as9bvc7t7hhvv",
-        "https://stream.zeno.fm/fh68vgu6echvv",
-        "https://27603.live.streamtheworld.com/LENTOS.mp3"
-      ]
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #02040a;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #ffffff;
     }
-  ];
 
-  /* ======================================================================
-     2. GESTOR DE ESTADO Y UTILIDADES
-     ====================================================================== */
-  const state = {
-    stations: [],
-    currentStation: null,
-    selectedGenre: "all",
-    onlyHD: false,
-    userOrigin: { ...CONFIG.BARILOCHE },
-    favorites: [],
-    flyTimer: null,
-    searchTimer: null,
-    userHasInteracted: false
-  };
-
-  const Utils = {
-    $: (id) => document.getElementById(id),
-    cleanText: (val) => String(val ?? "").trim(),
-
-    getKilometers(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon / 2) ** 2;
-      return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))));
-    },
-
-    hasCoordinates(station) {
-      return station &&
-             Number.isFinite(station.lat) && Number.isFinite(station.lng) &&
-             Math.abs(station.lat) <= 90 && Math.abs(station.lng) <= 180 &&
-             !(Math.abs(station.lat) < 0.1 && Math.abs(station.lng) < 0.1);
-    },
-
-    normalizeStation(raw) {
-      if (!raw) return null;
-      const lat = Number.parseFloat(raw.geo_lat ?? raw.lat);
-      const lng = Number.parseFloat(raw.geo_long ?? raw.lng);
-      const primaryUrl = Utils.cleanText(raw.url_resolved || raw.url);
-
-      return {
-        stationuuid: Utils.cleanText(raw.stationuuid ?? raw.uuid),
-        name: Utils.cleanText(raw.name) || "Radio sin nombre",
-        country: Utils.cleanText(raw.country),
-        countrycode: Utils.cleanText(raw.countrycode || raw.country_code).toUpperCase(),
-        state: Utils.cleanText(raw.state),
-        tags: Utils.cleanText(raw.tags).toLowerCase(),
-        bitrate: Number(raw.bitrate) || 0,
-        codec: Utils.cleanText(raw.codec),
-        lat: Number.isFinite(lat) ? lat : null,
-        lng: Number.isFinite(lng) ? lng : null,
-        url: primaryUrl,
-        urlResolved: primaryUrl,
-        sources: Array.isArray(raw.sources) && raw.sources.length ? raw.sources : [primaryUrl]
-      };
-    },
-
-    stationKey(station) {
-      if (!station) return "";
-      return station.stationuuid ? `uuid:${station.stationuuid}` : `url:${station.urlResolved || station.url}`;
+    #globe {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
     }
-  };
 
-  /* ======================================================================
-     3. MOTOR DE AUDIO Y RELOJ DUAL
-     ====================================================================== */
-  const AudioEngine = {
-    player: new Audio(),
-    staticPlayer: new Audio(CONFIG.STATIC_FILE_PATH),
-    audioCtx: null,
-
-    initContext() {
-      if (!this.audioCtx) {
-        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtxClass) this.audioCtx = new AudioCtxClass();
-      }
-      if (this.audioCtx && this.audioCtx.state === "suspended") {
-        this.audioCtx.resume();
-      }
-    },
-
-    playStaticNoise() {
-      if (!state.userHasInteracted) return;
-
-      try {
-        this.staticPlayer.currentTime = 0;
-        this.staticPlayer.volume = 0.35;
-        const playPromise = this.staticPlayer.play();
-
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setTimeout(() => {
-                try { this.staticPlayer.pause(); } catch(e){}
-              }, CONFIG.STATIC_DURATION_MS);
-            })
-            .catch(() => {
-              this.playSyntheticStatic();
-            });
-        }
-      } catch (e) {
-        this.playSyntheticStatic();
-      }
-    },
-
-    playSyntheticStatic(duration = 0.35) {
-      if (!state.userHasInteracted) return;
-      try {
-        this.initContext();
-        if (!this.audioCtx) return;
-
-        const ctx = this.audioCtx;
-        const bufferSize = ctx.sampleRate * duration;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const output = buffer.getChannelData(0);
-
-        for (let i = 0; i < bufferSize; i++) {
-          output[i] = (Math.random() * 2 - 1) * 0.1;
-        }
-
-        const whiteNoise = ctx.createBufferSource();
-        whiteNoise.buffer = buffer;
-
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-
-        whiteNoise.connect(gain);
-        gain.connect(ctx.destination);
-
-        whiteNoise.start();
-      } catch (e) {}
-    },
-
-    playStream(sources, onStatusChange, onError) {
-      this.stopStream();
-      let sourceIdx = 0;
-
-      const trySource = () => {
-        if (sourceIdx >= sources.length) {
-          if (onError) onError();
-          return;
-        }
-
-        this.player.src = sources[sourceIdx];
-        this.player.play()
-          .then(() => {
-            if (onStatusChange) onStatusChange(true);
-          })
-          .catch(() => {
-            sourceIdx++;
-            trySource();
-          });
-      };
-
-      trySource();
-    },
-
-    stopStream() {
-      try {
-        this.player.pause();
-        this.player.currentTime = 0;
-      } catch (e) {}
-    },
-
-    togglePlay() {
-      this.initContext();
-      if (this.player.paused) {
-        return this.player.play();
-      } else {
-        this.player.pause();
-        return Promise.reject();
-      }
+    /* Mirilla central dorada */
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 26px;
+      height: 26px;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255, 170, 0, 0.85);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 0 14px rgba(255, 170, 0, 0.7);
     }
-  };
-
-  function getFormattedHHMM(dateObj, timeZoneName = null) {
-    try {
-      const opts = {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      };
-      if (timeZoneName) {
-        opts.timeZone = timeZoneName;
-      }
-      return new Intl.DateTimeFormat('en-GB', opts).format(dateObj);
-    } catch (e) {
-      const h = String(dateObj.getHours()).padStart(2, '0');
-      const m = String(dateObj.getMinutes()).padStart(2, '0');
-      return `${h}:${m}`;
+    .crosshair::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background-color: #ffaa00;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
     }
-  }
 
-  const ClockModule = {
-    timer: null,
-
-    start() {
-      this.updateClocks();
-      if (this.timer) clearInterval(this.timer);
-      this.timer = setInterval(() => this.updateClocks(), 1000);
-    },
-
-    updateClocks() {
-      try {
-        const now = new Date();
-
-        const localTimeStr = getFormattedHHMM(now);
-        const localEl = Utils.$("clockLocal");
-        if (localEl) localEl.textContent = localTimeStr;
-
-        const stationEl = Utils.$("clockStation");
-        const labelEl = Utils.$("clockStationLabel");
-
-        if (!state.currentStation) {
-          if (stationEl) stationEl.textContent = localTimeStr;
-          if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
-          return;
-        }
-
-        const countryName = (state.currentStation.country || "").toUpperCase().trim();
-        const countryCode = (state.currentStation.countrycode || "").toUpperCase().trim();
-
-        const timezone = COUNTRY_TIMEZONES[countryCode] || COUNTRY_TIMEZONES[countryName] || null;
-
-        if (timezone) {
-          const stationTimeStr = getFormattedHHMM(now, timezone);
-          if (stationEl) stationEl.textContent = stationTimeStr;
-          if (labelEl) labelEl.textContent = `HORA DE ${countryName || "EMISORA"}`;
-        } else {
-          if (stationEl) stationEl.textContent = localTimeStr;
-          if (labelEl) labelEl.textContent = "HORA DE LA RADIO";
-        }
-      } catch (err) {}
+    /* CONTROLES SUPERIORES (IZQUIERDA) */
+    .search-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 680px;
     }
-  };
 
-  const markUserInteraction = () => {
-    state.userHasInteracted = true;
-    AudioEngine.initContext();
-  };
-
-  ["click", "pointerdown", "keydown", "touchstart"].forEach(evt => {
-    window.addEventListener(evt, markUserInteraction, { once: true });
-  });
-
-  /* ======================================================================
-     4. PERSISTENCIA Y API
-     ====================================================================== */
-  const StorageManager = {
-    loadFavorites() {
-      try {
-        const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-        return parsed.map(Utils.normalizeStation).filter(s => s && s.url);
-      } catch (e) {
-        return [];
-      }
-    },
-
-    saveFavorites(favorites) {
-      try {
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(favorites));
-      } catch (e) {}
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
-  };
 
-  const RadioAPI = {
-    async fetchServer(path) {
-      for (const server of CONFIG.SERVERS) {
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch(server + path, { signal: controller.signal });
-          clearTimeout(timer);
-          if (res.ok) return await res.json();
-        } catch (e) {}
-      }
-      return [];
-    },
-
-    async fetchPopular() {
-      const raw = await this.fetchServer(`/json/stations/search?has_geo_info=true&order=votes&reverse=true&limit=${CONFIG.INITIAL_LIMIT}&hidebroken=true`);
-      return raw.map(Utils.normalizeStation).filter(s => s && s.url && Utils.hasCoordinates(s));
-    },
-
-    async searchByName(query) {
-      const q = Utils.cleanText(query);
-      if (!q) return [];
-      const encoded = encodeURIComponent(q);
-      const raw = await this.fetchServer(`/json/stations/byname/${encoded}?hidebroken=true&limit=${CONFIG.SEARCH_LIMIT}`);
-      return raw.map(Utils.normalizeStation).filter(s => s && s.url);
+    .search-input {
+      width: 260px;
+      padding: 10px 18px;
+      border-radius: 24px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s ease;
     }
-  };
-
-  /* ======================================================================
-     5. GESTOR DEL GLOBO TERRAQUEO
-     ====================================================================== */
-  const GlobeManager = {
-    instance: null,
-
-    init(containerId) {
-      const elem = document.getElementById(containerId);
-      if (!elem) return;
-
-      const savedTheme = localStorage.getItem(CONFIG.THEME_KEY) || "night";
-      const initialTexture = GLOBE_THEMES[savedTheme].url;
-
-      if (typeof Globe === "function") {
-        this.instance = Globe()(elem)
-          .globeImageUrl(initialTexture)
-          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-          .pointAltitude(s => App.isMatchFilters(s) ? 0.012 : 0.002)
-          .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.04)
-          .pointResolution(6)
-          .polygonCapColor(() => "rgba(0,0,0,0)")
-          .polygonSideColor(() => "rgba(0,0,0,0)")
-          .polygonStrokeColor(() => "rgba(255,170,0,0.25)")
-          .arcColor(() => ["#ffaa00", "rgba(255,170,0,0.1)"])
-          .arcAltitude(0.2)
-          .arcDashLength(0.4)
-          .arcDashGap(0.2)
-          .arcDashAnimateTime(1200)
-          .arcStroke(0.3)
-          .onPointClick(station => {
-            markUserInteraction();
-            if (station) App.flyAndTune(station);
-          })
-          .onGlobeClick(({ lat, lng }) => {
-            markUserInteraction();
-            App.tuneNearestToLocation(lat, lng);
-          });
-
-        this.instance.pointOfView({ lat: CONFIG.BARILOCHE.lat, lng: CONFIG.BARILOCHE.lng, altitude: 0.9 }, 0);
-        this.loadCountryBorders();
-        this.updateThemeButton(savedTheme);
-      }
-    },
-
-    setTheme(theme) {
-      const active = GLOBE_THEMES[theme] || GLOBE_THEMES.night;
-      if (this.instance) {
-        this.instance.globeImageUrl(active.url);
-      }
-      this.updateThemeButton(theme);
-    },
-
-    updateThemeButton(theme) {
-      const btn = Utils.$("themeBtn");
-      if (btn) {
-        btn.textContent = GLOBE_THEMES[theme].icon;
-      }
-    },
-
-    loadCountryBorders() {
-      fetch("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
-        .then(res => res.json())
-        .then(data => {
-          if (data && Array.isArray(data.features) && this.instance) {
-            this.instance.polygonsData(data.features);
-          }
-        })
-        .catch(() => {});
-    },
-
-    updatePoints(stations) {
-      if (this.instance) {
-        this.instance.pointsData(stations.filter(Utils.hasCoordinates));
-      }
-    },
-
-    refreshPointStyles() {
-      if (this.instance) {
-        this.instance
-          .pointColor(s => App.isMatchFilters(s) ? "#ffaa00" : "rgba(255,170,0,0.12)")
-          .pointAltitude(s => App.isMatchFilters(s) ? 0.012 : 0.002)
-          .pointRadius(s => App.isMatchFilters(s) ? 0.22 : 0.04);
-      }
-    },
-
-    drawArc(origin, destination) {
-      if (!this.instance) return;
-      if (Utils.hasCoordinates(destination)) {
-        this.instance.arcsData([{
-          startLat: origin.lat,
-          startLng: origin.lng,
-          endLat: destination.lat,
-          endLng: destination.lng
-        }]);
-      } else {
-        this.instance.arcsData([]);
-      }
-    },
-
-    flyTo(lat, lng, altitude = 0.8, duration = CONFIG.ANIMATION_SPEED_MS) {
-      if (this.instance) {
-        this.instance.pointOfView({ lat, lng, altitude }, duration);
-      }
-    },
-
-    getCenterCoordinates() {
-      return this.instance ? this.instance.pointOfView() : { lat: 0, lng: 0 };
+    .search-input:focus {
+      border-color: #ffaa00;
+      box-shadow: 0 0 14px rgba(255, 170, 0, 0.5);
     }
-  };
+    .search-input::placeholder { color: #8a99ad; }
 
-  const UI = {
-    updateCard(station, userOrigin) {
-      if (!station) return;
-
-      const nameEl = Utils.$("name");
-      const countryEl = Utils.$("country");
-      const distanceEl = Utils.$("distance");
-      const badgeEl = Utils.$("bitrateBadge");
-
-      if (nameEl) nameEl.textContent = station.name;
-      if (countryEl) countryEl.textContent = `📍 ${station.country || "Ubicación desconocida"}`;
-
-      if (distanceEl) {
-        if (Utils.hasCoordinates(station)) {
-          const dist = Utils.getKilometers(userOrigin.lat, userOrigin.lng, station.lat, station.lng);
-          distanceEl.textContent = `📐 A ${dist.toLocaleString("es-AR")} km de ${userOrigin.label}`;
-        } else {
-          distanceEl.textContent = "📍 Ubicación no disponible";
-        }
-      }
-
-      if (badgeEl) {
-        const bitrate = station.bitrate;
-        const codec = station.codec ? station.codec.toUpperCase() : "";
-        if (bitrate > 0 || codec) {
-          const isHQ = bitrate >= 192 || codec === "FLAC";
-          badgeEl.textContent = `${isHQ ? "⚡ HQ " : ""}${bitrate ? bitrate + " kbps" : ""} ${codec ? "(" + codec + ")" : ""}`;
-          badgeEl.style.display = "inline-block";
-        } else {
-          badgeEl.style.display = "none";
-        }
-      }
-    },
-
-    setStatus(text) {
-      const statusEl = Utils.$("statusText");
-      if (statusEl) statusEl.textContent = text;
-    },
-
-    setPlayingState(isPlaying) {
-      const playBtn = Utils.$("playBtn");
-      const eqBars = Utils.$("eqBars");
-      if (playBtn) playBtn.textContent = isPlaying ? "⏸ Pausa" : "▶ Reprod.";
-      if (eqBars) eqBars.style.display = isPlaying ? "flex" : "none";
-    },
-
-    renderFavoritesList(favorites, onSelect, onRemove) {
-      const favList = Utils.$("favList");
-      if (!favList) return;
-
-      favList.innerHTML = "";
-      if (!favorites.length) {
-        favList.innerHTML = '<p style="font-size:12px; color:#666; margin:0;">Sin favoritos</p>';
-        return;
-      }
-
-      favorites.forEach(fav => {
-        const div = document.createElement("div");
-        div.className = "fav-item";
-
-        const name = document.createElement("span");
-        name.textContent = `📻 ${fav.name}`;
-        name.style.cursor = "pointer";
-        name.addEventListener("click", () => onSelect(fav));
-
-        const removeBtn = document.createElement("button");
-        removeBtn.textContent = "×";
-        removeBtn.style.cssText = "background:transparent; border:0; color:#888; cursor:pointer; font-size:16px;";
-        removeBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          onRemove(fav);
-        });
-
-        div.appendChild(name);
-        div.appendChild(removeBtn);
-        favList.appendChild(div);
-      });
-    },
-
-    updateFavoriteButton(isFavorite) {
-      const favBtn = Utils.$("favBtn");
-      if (!favBtn) return;
-      favBtn.classList.toggle("active", isFavorite);
-      favBtn.textContent = isFavorite ? "♥ Guardado" : "♡ Guardar";
-    },
-
-    renderSearchResults(results, onSelect) {
-      const dropdown = Utils.$("searchResults");
-      if (!dropdown) return;
-
-      dropdown.innerHTML = "";
-      const visible = results.slice(0, 8);
-      if (!visible.length) {
-        dropdown.style.display = "none";
-        return;
-      }
-
-      visible.forEach(station => {
-        const item = document.createElement("div");
-        item.className = "results-item";
-        item.textContent = `📻 ${station.name}${station.country ? ` — ${station.country}` : ""}`;
-        item.addEventListener("click", () => {
-          this.clearSearchResults();
-          if (Utils.$("searchInput")) Utils.$("searchInput").value = station.name;
-          onSelect(station);
-        });
-        dropdown.appendChild(item);
-      });
-
-      dropdown.style.display = "block";
-    },
-
-    clearSearchResults() {
-      const dropdown = Utils.$("searchResults");
-      if (dropdown) {
-        dropdown.innerHTML = "";
-        dropdown.style.display = "none";
-      }
+    .genre-select {
+      padding: 10px 18px;
+      border-radius: 24px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #ffaa00;
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s ease;
     }
-  };
-
-  const App = {
-    init() {
-      try { state.favorites = StorageManager.loadFavorites(); } catch(e){}
-      try { ClockModule.start(); } catch(e){}
-      try { GlobeManager.init("globe"); } catch(e){}
-      try { this.bindEvents(); } catch(e){}
-      try { this.loadInitialData(); } catch(e){}
-      try { this.detectGeolocation(); } catch(e){}
-    },
-
-    bindEvents() {
-      window.toggleHD = () => this.toggleHD();
-      window.toggleTheme = () => this.toggleTheme();
-      window.filterByGenre = (genre) => this.filterByGenre(genre);
-      window.playRandomStation = () => this.playRandomStation();
-      window.toggleAudio = () => this.toggleAudio();
-      window.toggleFavorite = () => this.toggleFavorite();
-      window.locateOrigin = () => this.locateOrigin();
-      window.handleSearchKey = (e) => this.handleSearchKey(e);
-      window.toggleFavPanelMobile = () => this.toggleFavPanelMobile();
-
-      document.addEventListener("click", (e) => {
-        const container = document.querySelector(".search-container");
-        const favPanel = document.querySelector(".fav-panel");
-        const favToggleBtn = document.getElementById("favToggleBtn");
-
-        if (container && !container.contains(e.target)) {
-          UI.clearSearchResults();
-        }
-
-        if (favPanel && favToggleBtn && !favPanel.contains(e.target) && !favToggleBtn.contains(e.target)) {
-          favPanel.classList.remove("show");
-        }
-      });
-    },
-
-    toggleFavPanelMobile() {
-      const favPanel = document.querySelector(".fav-panel");
-      if (favPanel) {
-        favPanel.classList.toggle("show");
-      }
-    },
-
-    async loadInitialData() {
-      try {
-        const popular = await RadioAPI.fetchPopular();
-        this.mergeStations([...CUSTOM_STATIONS.map(Utils.normalizeStation), ...popular]);
-
-        const localStations = await RadioAPI.searchByName("bariloche");
-        this.mergeStations(localStations);
-
-        const barilocheMatch = localStations.find(Utils.hasCoordinates);
-        if (barilocheMatch) {
-          this.flyAndTune(barilocheMatch, true);
-        } else {
-          this.tuneNearestToCenter();
-        }
-      } catch (e) {
-        UI.setStatus("⚠️ ERROR AL CARGAR ESTACIONES");
-      }
-
-      this.updateFavoritesUI();
-    },
-
-    detectGeolocation() {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          state.userOrigin = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            label: "tu ubicación"
-          };
-          if (state.currentStation) {
-            UI.updateCard(state.currentStation, state.userOrigin);
-          }
-        });
-      }
-    },
-
-    mergeStations(newStations) {
-      const map = new Map();
-      for (const s of state.stations) {
-        if (s && Utils.stationKey(s)) map.set(Utils.stationKey(s), s);
-      }
-      for (const s of newStations) {
-        if (s && Utils.stationKey(s)) map.set(Utils.stationKey(s), s);
-      }
-      state.stations = Array.from(map.values());
-      GlobeManager.updatePoints(state.stations);
-    },
-
-    isMatchFilters(station) {
-      if (!station) return false;
-      let matchGenre = true;
-      if (state.selectedGenre !== "all") {
-        const tags = station.tags || "";
-        const name = (station.name || "").toLowerCase();
-        matchGenre = tags.includes(state.selectedGenre) || name.includes(state.selectedGenre);
-      }
-
-      let matchHD = true;
-      if (state.onlyHD) {
-        const bitrate = station.bitrate || 0;
-        const codec = (station.codec || "").toLowerCase();
-        matchHD = bitrate >= 192 || codec === "flac";
-      }
-
-      return matchGenre && matchHD;
-    },
-
-    flyAndTune(station, isInitial = false) {
-      if (!station) return;
-
-      if (state.flyTimer) clearTimeout(state.flyTimer);
-      AudioEngine.stopStream();
-
-      if (!isInitial) {
-        AudioEngine.playStaticNoise();
-      }
-
-      const normalized = Utils.normalizeStation(station);
-      if (!normalized) return;
-
-      state.currentStation = normalized;
-      UI.updateCard(normalized, state.userOrigin);
-      UI.setStatus("● BUSCANDO SEÑAL...");
-      ClockModule.updateClocks();
-
-      if (!Utils.hasCoordinates(normalized)) {
-        this.tuneStation(normalized);
-        return;
-      }
-
-      GlobeManager.flyTo(normalized.lat, normalized.lng, 0.8, CONFIG.ANIMATION_SPEED_MS);
-
-      state.flyTimer = setTimeout(() => {
-        this.tuneStation(normalized);
-      }, CONFIG.ANIMATION_SPEED_MS + 50);
-    },
-
-    tuneNearestToLocation(lat, lng) {
-      let pool = state.stations.filter(s => Utils.hasCoordinates(s) && this.isMatchFilters(s));
-      if (!pool.length) {
-        pool = state.stations.filter(Utils.hasCoordinates);
-      }
-      if (!pool.length) return;
-
-      let nearest = null;
-      let minDistance = Infinity;
-
-      for (const s of pool) {
-        const d = Utils.getKilometers(lat, lng, s.lat, s.lng);
-        if (d < minDistance) {
-          minDistance = d;
-          nearest = s;
-        }
-      }
-
-      if (nearest) {
-        this.flyAndTune(nearest);
-      }
-    },
-
-    tuneStation(station) {
-      if (!station || !station.url) return;
-
-      GlobeManager.drawArc(state.userOrigin, station);
-      UI.setStatus("● CONECTANDO...");
-
-      const sources = station.sources && station.sources.length ? station.sources : [station.url];
-
-      AudioEngine.playStream(
-        sources,
-        (isPlaying) => {
-          UI.setPlayingState(isPlaying);
-          UI.setStatus(isPlaying ? "● SINTONIZANDO" : "⏸ EN PAUSA");
-        },
-        () => {
-          UI.setPlayingState(false);
-          UI.setStatus("⚠️ ERROR DE EMISIÓN");
-        }
-      );
-
-      this.updateFavoritesUI();
-    },
-
-    toggleAudio() {
-      if (!state.currentStation) return;
-      AudioEngine.togglePlay()
-        .then(() => UI.setPlayingState(true))
-        .catch(() => UI.setPlayingState(false));
-    },
-
-    toggleHD() {
-      state.onlyHD = !state.onlyHD;
-      const hdBtn = Utils.$("hdBtn");
-      if (hdBtn) hdBtn.classList.toggle("active", state.onlyHD);
-      GlobeManager.refreshPointStyles();
-    },
-
-    toggleTheme() {
-      const current = localStorage.getItem(CONFIG.THEME_KEY) || "night";
-      const next = current === "day" ? "night" : "day";
-      localStorage.setItem(CONFIG.THEME_KEY, next);
-      GlobeManager.setTheme(next);
-    },
-
-    filterByGenre(genre) {
-      state.selectedGenre = Utils.cleanText(genre) || "all";
-      GlobeManager.refreshPointStyles();
-    },
-
-    playRandomStation() {
-      const activeStations = state.stations.filter(s => s.url && this.isMatchFilters(s));
-      if (activeStations.length) {
-        const randomChoice = activeStations[Math.floor(Math.random() * activeStations.length)];
-        this.flyAndTune(randomChoice);
-      }
-    },
-
-    toggleFavorite() {
-      if (!state.currentStation) return;
-      const key = Utils.stationKey(state.currentStation);
-      const idx = state.favorites.findIndex(f => Utils.stationKey(f) === key);
-
-      if (idx >= 0) {
-        state.favorites.splice(idx, 1);
-      } else {
-        state.favorites.push(state.currentStation);
-      }
-
-      StorageManager.saveFavorites(state.favorites);
-      this.updateFavoritesUI();
-    },
-
-    updateFavoritesUI() {
-      const isFav = state.currentStation ?
-        state.favorites.some(f => Utils.stationKey(f) === Utils.stationKey(state.currentStation)) :
-        false;
-
-      UI.updateFavoriteButton(isFav);
-      UI.renderFavoritesList(
-        state.favorites,
-        (favStation) => this.flyAndTune(favStation),
-        (favStation) => {
-          state.favorites = state.favorites.filter(f => Utils.stationKey(f) !== Utils.stationKey(favStation));
-          StorageManager.saveFavorites(state.favorites);
-          this.updateFavoritesUI();
-        }
-      );
-    },
-
-    tuneNearestToCenter() {
-      const pov = GlobeManager.getCenterCoordinates();
-      this.tuneNearestToLocation(pov.lat, pov.lng);
-    },
-
-    locateOrigin() {
-      GlobeManager.flyTo(state.userOrigin.lat, state.userOrigin.lng, 0.9, 800);
-      setTimeout(() => this.tuneNearestToCenter(), 850);
-    },
-
-    handleSearchKey(event) {
-      const q = Utils.cleanText(event.target.value);
-
-      if (event.key === "Enter") {
-        event.preventDefault();
-        clearTimeout(state.searchTimer);
-        RadioAPI.searchByName(q).then(results => {
-          this.mergeStations(results);
-          const match = results.find(Utils.hasCoordinates) || results[0];
-          if (match) this.flyAndTune(match);
-        });
-        UI.clearSearchResults();
-        return;
-      }
-
-      clearTimeout(state.searchTimer);
-      if (q.length >= 3) {
-        state.searchTimer = setTimeout(async () => {
-          const results = await RadioAPI.searchByName(q);
-          this.mergeStations(results);
-          UI.renderSearchResults(results, (selected) => this.flyAndTune(selected));
-        }, 300);
-      } else {
-        UI.clearSearchResults();
-      }
+    .genre-select option {
+      background-color: #0c101c;
+      color: #fff;
+      font-size: 14px;
     }
-  };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => App.init());
-  } else {
-    App.init();
-  }
-})();
+    .btn-top {
+      height: 42px;
+      padding: 0 16px;
+      border-radius: 21px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #ffaa00;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-top:hover {
+      border-color: #ffaa00;
+      transform: scale(1.05);
+    }
+    .btn-top.active {
+      background: #ffaa00;
+      color: #02040a;
+    }
+
+    .geo-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      color: #ffaa00;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: transform 0.2s ease;
+    }
+    .geo-btn:hover {
+      transform: scale(1.08);
+      border-color: #ffaa00;
+    }
+
+    .fav-toggle-btn {
+      display: none;
+    }
+
+    .results-dropdown {
+      background: rgba(12, 16, 28, 0.96);
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      border-radius: 16px;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+    }
+    .results-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #ddd;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .results-item:hover {
+      background: rgba(255, 170, 0, 0.25);
+      color: #ffaa00;
+    }
+
+    /* PANEL FAVORITOS (DERECHA SUPERIOR) */
+    .fav-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      border-radius: 16px;
+      padding: 14px 18px;
+      z-index: 30;
+      width: 260px;
+      max-height: 240px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+      transition: all 0.3s ease;
+    }
+    .fav-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #ffaa00;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+    .fav-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+      color: #dddddd;
+    }
+    .fav-item span:hover { color: #ffaa00; }
+
+    /* TARJETA REPRODUCTOR (IZQUIERDA INFERIOR) */
+    .card {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      padding: 18px 22px;
+      border-radius: 18px;
+      border: 1.5px solid rgba(255, 170, 0, 0.5);
+      z-index: 30;
+      width: 360px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #ffaa00;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .card h2 {
+      margin: 0 0 4px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card p {
+      margin: 3px 0;
+      font-size: 14px;
+      color: #abb8c7;
+    }
+    .distance-tag {
+      font-size: 13px;
+      color: #ffaa00;
+      font-weight: 700;
+      margin-top: 4px;
+      display: block;
+    }
+    .bitrate-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffaa00;
+      background: rgba(255, 170, 0, 0.15);
+      border: 1px solid rgba(255, 170, 0, 0.4);
+      border-radius: 8px;
+      padding: 2px 8px;
+      margin-top: 6px;
+    }
+    .hint-tag {
+      font-size: 11px;
+      color: #667788;
+      margin-top: 4px;
+      display: block;
+      font-style: italic;
+    }
+
+    /* BOTONES MÁS COMPACTOS Y ESTILIZADOS */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn-play {
+      flex: 1;
+      background: #ffaa00;
+      border: none;
+      color: #02040a;
+      padding: 8px 12px;
+      height: 36px;
+      border-radius: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-play:hover {
+      background: #ffc44d;
+      transform: scale(1.02);
+    }
+    .btn-random {
+      background: rgba(255, 170, 0, 0.15);
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      color: #ffaa00;
+      padding: 8px 12px;
+      height: 36px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-random:hover {
+      background: rgba(255, 170, 0, 0.3);
+      transform: scale(1.02);
+    }
+    .btn-fav {
+      background: transparent;
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      color: #ffaa00;
+      padding: 8px 12px;
+      height: 36px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-fav.active {
+      background: #ffaa00;
+      color: #02040a;
+    }
+
+    /* FILA DE VOLUMEN (ABAJO DE TODO EN LA TARJETA) */
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .volume-btn {
+      background: transparent;
+      border: none;
+      color: #ffaa00;
+      font-size: 16px;
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    }
+    .volume-btn:hover {
+      transform: scale(1.15);
+    }
+
+    .volume-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.2);
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Estilo del indicador de la barra deslizante */
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffaa00;
+      box-shadow: 0 0 8px rgba(255, 170, 0, 0.8);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .volume-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+    .volume-slider::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffaa00;
+      border: none;
+      box-shadow: 0 0 8px rgba(255, 170, 0, 0.8);
+      cursor: pointer;
+    }
+
+    .volume-value {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      color: #8a99ad;
+      min-width: 38px;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    /* ECUALIZADOR ANIMADO */
+    .eq-bars {
+      display: none;
+      align-items: flex-end;
+      gap: 3px;
+      height: 14px;
+    }
+    .eq-bar {
+      width: 3px;
+      background: #ffaa00;
+      animation: eqAnim 0.8s infinite alternate ease-in-out;
+    }
+    .eq-bar:nth-child(2) { animation-delay: 0.2s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes eqAnim {
+      0% { height: 3px; }
+      100% { height: 14px; }
+    }
+
+    /* RELOJ DUAL SMARTWATCH (DERECHA INFERIOR) */
+    .clock-box {
+      position: absolute;
+      bottom: 105px;
+      right: 24px;
+      z-index: 30;
+      background: rgba(10, 14, 24, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      border-radius: 20px;
+      padding: 12px 20px;
+      text-align: center;
+      min-width: 260px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.85);
+      font-family: 'Orbitron', monospace;
+    }
+    .clock-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .clock-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .clock-label-station { color: #ffaa00; }
+    .clock-label-local { color: #8a99ad; margin-top: 8px; }
+
+    .clock-time-station {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+    .clock-time-local {
+      font-size: 20px;
+      font-weight: 600;
+      color: #cbd5e1;
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+
+    /* CARTEL CENTRADO INFERIOR DERECHO */
+    .branding-box {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      z-index: 30;
+      background: rgba(12, 16, 28, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(255, 170, 0, 0.6);
+      border-radius: 16px;
+      padding: 14px 26px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 260px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .branding-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #ffaa00;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin: 0;
+      text-shadow: 0 0 14px rgba(255, 170, 0, 0.7);
+      text-align: center;
+      width: 100%;
+      display: block;
+    }
+    .branding-sub {
+      font-size: 11px;
+      color: #8a99ad;
+      margin: 4px 0 0 0;
+      letter-spacing: 1px;
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+      display: block;
+    }
+
+    /* MEDIA QUERIES RESPONSIVE */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .search-container { top: 16px; left: 16px; max-width: 520px; }
+      .search-input { width: 200px; }
+      .fav-panel { top: 16px; right: 16px; width: 230px; }
+      .card { bottom: 16px; left: 16px; width: 320px; padding: 16px 20px; }
+      .clock-box { bottom: 95px; right: 16px; min-width: 220px; padding: 10px 16px; }
+      .branding-box { bottom: 16px; right: 16px; min-width: 220px; padding: 10px 18px; }
+      .branding-title { font-size: 16px; }
+    }
+
+    @media (max-width: 767px) {
+      .crosshair { display: none; }
+      .search-container { top: 12px; left: 12px; right: 12px; max-width: none; width: calc(100% - 24px); }
+      .search-row { flex-wrap: wrap; gap: 8px; }
+      .search-input { width: 100%; flex: 1 1 100%; order: 1; }
+      .genre-select { flex: 1 1 auto; font-size: 13px; padding: 8px 12px; order: 2; }
+      .btn-top, .geo-btn { height: 38px; padding: 0 12px; font-size: 13px; order: 3; }
+      .fav-toggle-btn { display: flex !important; order: 4; }
+
+      .fav-panel { top: 115px; right: 12px; left: 12px; width: auto; max-height: 45vh; display: none; box-shadow: 0 12px 32px rgba(0,0,0,0.9); }
+      .fav-panel.show { display: block !important; }
+
+      .card { bottom: 12px; left: 12px; right: 12px; width: calc(100% - 24px); padding: 14px 18px; border-radius: 16px; }
+      .card h2 { font-size: 16px; }
+      .controls { gap: 8px; }
+      .btn-play, .btn-random, .btn-fav { padding: 8px 6px; font-size: 12px; height: 38px; }
+
+      .clock-box { bottom: auto; top: 115px; right: 12px; min-width: 160px; padding: 8px 12px; border-radius: 14px; background: rgba(10, 14, 24, 0.88); }
+      .clock-time-station { font-size: 17px; }
+      .clock-time-local { font-size: 15px; }
+      .clock-label { font-size: 8px; }
+      .branding-box { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA DE BÚSQUEDA Y FILTROS SUPERIORES -->
+  <div class="search-container">
+    <div class="search-row">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora o país..." onkeydown="handleSearchKey(event)" autocomplete="off">
+      
+      <select id="genreSelect" class="genre-select" onchange="filterByGenre(this.value)">
+        <option value="all">🎵 Todos los géneros</option>
+        <option value="lentos">💕 Lentos / Baladas</option>
+        <option value="folklore">🪗 Folklore</option>
+        <option value="rock">🎸 Rock</option>
+        <option value="pop">🎤 Pop</option>
+        <option value="80s">📻 Años 80s / Retro</option>
+        <option value="jazz">🎷 Jazz</option>
+        <option value="tango">💃 Tango</option>
+        <option value="cumbia">🪘 Cumbia / Tropical</option>
+        <option value="reggae">🌴 Reggae / Chill</option>
+        <option value="news">📰 Noticias</option>
+        <option value="electronic">🎧 Electrónica</option>
+        <option value="classical">🎻 Clásica</option>
+      </select>
+
+      <button id="hdBtn" class="btn-top" onclick="toggleHD()" title="Solo Alta Calidad HQ">HQ</button>
+      <button id="themeBtn" class="btn-top" onclick="toggleTheme()" title="Modo Día / Noche">☀️</button>
+      <button class="geo-btn" onclick="locateOrigin()" title="Ir a mi ubicación">🏔️</button>
+      <button id="favToggleBtn" class="btn-top fav-toggle-btn" onclick="toggleFavPanelMobile()" title="Mis Favoritas">⭐</button>
+    </div>
+    <div id="searchResults" class="results-dropdown"></div>
+  </div>
+
+  <!-- PANEL DE FAVORITOS -->
+  <div class="fav-panel" id="favPanel">
+    <h3>⭐ MIS FAVORITAS</h3>
+    <div id="favList"></div>
+  </div>
+
+  <div class="crosshair"></div>
+
+  <!-- REPRODUCTOR INFERIOR IZQUIERDO -->
+  <div class="card">
+    <div class="status-badge">
+      <span id="statusText">● SINTONIZANDO</span>
+      <div class="eq-bars" id="eqBars">
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+        <div class="eq-bar"></div>
+      </div>
+    </div>
+    <h2 id="name">Buscando emisoras...</h2>
+    <p id="country">📍 -</p>
+    <span id="distance" class="distance-tag"></span>
+    <span id="bitrateBadge" class="bitrate-badge" style="display:none;"></span>
+    <span class="hint-tag">💡 Mové el globo y hacé clic para cambiar de radio</span>
+    
+    <div class="controls">
+      <button class="btn-play" id="playBtn" onclick="toggleAudio()">▶ Reprod.</button>
+      <button class="btn-random" onclick="playRandomStation()" title="Radio Aleatoria">🎲 Sorpréndeme</button>
+      <button class="btn-fav" id="favBtn" onclick="toggleFavorite()">♡ Guardar</button>
+    </div>
+
+    <!-- FILA DE VOLUMEN (ABAJO DE TODO EN LA CAJA) -->
+    <div class="volume-container">
+      <button id="muteBtn" class="volume-btn" onclick="toggleMute()" title="Silenciar / Activar sonido">🔊</button>
+      <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="1" oninput="setVolume(this.value)">
+      <span id="volumeValue" class="volume-value">100%</span>
+    </div>
+  </div>
+
+  <!-- RELOJ DUAL SMARTWATCH -->
+  <div class="clock-box" id="clockBox">
+    <div class="clock-row">
+      <div id="clockStationLabel" class="clock-label clock-label-station">HORA DE LA RADIO</div>
+      <div id="clockStation" class="clock-time-station">--:--</div>
+    </div>
+    <div class="clock-row">
+      <div class="clock-label clock-label-local">HORA LOCAL</div>
+      <div id="clockLocal" class="clock-time-local">--:--</div>
+    </div>
+  </div>
+
+  <!-- CARTEL CENTRADO INFERIOR DERECHO -->
+  <div class="branding-box">
+    <h1 class="branding-title">RADIO S.C.BARILOCHE</h1>
+    <p class="branding-sub">PATAGONIA ARGENTINA • GLOBAL EXPLORER</p>
+  </div>
+
+  <!-- CONTENEDOR DEL GLOBO -->
+  <div id="globe"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
