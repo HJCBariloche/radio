@@ -1,14 +1,11 @@
 /* ========================================================================
    RADIO S.C. BARILOCHE - GLOBAL EXPLORER
-   Versión Estable: Control de Volumen Integrado + Responsive + Reloj HH:MM
+   Versión Estable: JavaScript Purificado + Control de Volumen Integrado
    ======================================================================== */
 
 (() => {
   "use strict";
 
-  /* ======================================================================
-     1. CONFIGURACIÓN Y CONSTANTES GLOBAL
-     ====================================================================== */
   const CONFIG = {
     SERVERS: [
       "https://de1.api.radio-browser.info",
@@ -115,9 +112,6 @@
     }
   ];
 
-  /* ======================================================================
-     2. GESTOR DE ESTADO Y UTILIDADES
-     ====================================================================== */
   const state = {
     stations: [],
     currentStation: null,
@@ -182,9 +176,6 @@
     }
   };
 
-  /* ======================================================================
-     3. MOTOR DE AUDIO Y VOLUMEN
-     ====================================================================== */
   const AudioEngine = {
     player: new Audio(),
     staticPlayer: new Audio(CONFIG.STATIC_FILE_PATH),
@@ -205,7 +196,6 @@
       state.volume = num;
       this.player.volume = num;
 
-      // Actualiza la interfaz del volumen
       const slider = Utils.$("volumeSlider");
       const label = Utils.$("volumeValue");
       const btn = Utils.$("muteBtn");
@@ -399,9 +389,6 @@
     window.addEventListener(evt, markUserInteraction, { once: true });
   });
 
-  /* ======================================================================
-     4. PERSISTENCIA Y API
-     ====================================================================== */
   const StorageManager = {
     loadFavorites() {
       try {
@@ -461,9 +448,6 @@
     }
   };
 
-  /* ======================================================================
-     5. GESTOR DEL GLOBO TERRAQUEO
-     ====================================================================== */
   const GlobeManager = {
     instance: null,
 
